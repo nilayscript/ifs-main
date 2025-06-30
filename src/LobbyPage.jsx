@@ -246,7 +246,7 @@ function LobbyPage() {
             View Raw JSON Data
           </summary>
           <div className="mt-2 bg-white p-4 rounded shadow">
-            <pre className="overflow-auto max-h-96 text-xs">
+            <pre className="overflow-auto max-h-96 text-xs font-black">
               {JSON.stringify(pageData, null, 2)}
             </pre>
           </div>
