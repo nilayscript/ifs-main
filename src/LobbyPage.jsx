@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { message, Spin } from "antd";
-import { LoadingOutlined, HomeOutlined, LineChartOutlined, BankOutlined } from "@ant-design/icons";
+import { LoadingOutlined, HomeOutlined, LineChartOutlined, BankOutlined, AppstoreOutlined } from "@ant-design/icons";
 
 function LobbyPage() {
   const { accessToken, pageId } = useParams();
@@ -39,25 +39,6 @@ function LobbyPage() {
     fetchLobbyPage();
   }, [accessToken, pageId]);
 
-  // Helper: Extract all images
-  const getAllImages = (data) => {
-    if (!data?.page?.Layout?.Groups?.Group) return [];
-    const groups = Array.isArray(data.page.Layout.Groups.Group) 
-      ? data.page.Layout.Groups.Group 
-      : [data.page.Layout.Groups.Group];
-    
-    let images = [];
-    groups.forEach(g => {
-      if (g.Elements?.Image) {
-        const imgs = Array.isArray(g.Elements.Image) 
-          ? g.Elements.Image 
-          : [g.Elements.Image];
-        images = images.concat(imgs);
-      }
-    });
-    return images;
-  };
-
   // Helper: Build full image URL
   const getImageUrl = (imgPath) => {
     if (!imgPath) return '';
@@ -65,23 +46,55 @@ function LobbyPage() {
     return 'https://ifsgcsc2-d02.demo.ifs.cloud' + imgPath;
   };
 
-  // Helper: Extract all KPI counters
-  const getKpis = (data) => {
+  // Helper: Extract all page elements organized by groups
+  const getPageStructure = (data) => {
     if (!data?.page?.Layout?.Groups?.Group) return [];
+    
     const groups = Array.isArray(data.page.Layout.Groups.Group) 
       ? data.page.Layout.Groups.Group 
       : [data.page.Layout.Groups.Group];
     
-    let kpis = [];
-    groups.forEach(g => {
-      if (g.Elements?.Counter) {
-        const counters = Array.isArray(g.Elements.Counter) 
-          ? g.Elements.Counter 
-          : [g.Elements.Counter];
-        kpis = kpis.concat(counters);
+    const structure = [];
+    
+    groups.forEach((group, groupIndex) => {
+      const groupData = {
+        index: groupIndex,
+        isSeparator: group.IsSeparator || false,
+        separatorTitle: group.SeparatorTitle || '',
+        separatorId: group.SeparatorId || '',
+        images: [],
+        texts: [],
+        counters: []
+      };
+      
+      // Extract images
+      if (group.Elements?.Image) {
+        const images = Array.isArray(group.Elements.Image) 
+          ? group.Elements.Image 
+          : [group.Elements.Image];
+        groupData.images = images;
       }
+      
+      // Extract text elements
+      if (group.Elements?.Text) {
+        const texts = Array.isArray(group.Elements.Text) 
+          ? group.Elements.Text 
+          : [group.Elements.Text];
+        groupData.texts = texts;
+      }
+      
+      // Extract counters (KPIs)
+      if (group.Elements?.Counter) {
+        const counters = Array.isArray(group.Elements.Counter) 
+          ? group.Elements.Counter 
+          : [group.Elements.Counter];
+        groupData.counters = counters;
+      }
+      
+      structure.push(groupData);
     });
-    return kpis;
+    
+    return structure;
   };
 
   // KPI color logic
@@ -92,42 +105,19 @@ function LobbyPage() {
     return 'text-red-600';
   };
 
-  // Helper: extract business areas
-  const getBusinessAreas = (data) => {
-    if (!data?.page?.Layout?.Groups?.Group) return [];
-    const groups = Array.isArray(data.page.Layout.Groups.Group) 
-      ? data.page.Layout.Groups.Group 
-      : [data.page.Layout.Groups.Group];
-    
-    let foundSeparator = false;
-    let areas = [];
-    
-    groups.forEach(g => {
-      if (g.IsSeparator && g.SeparatorTitle === "BUSINESS AREAS") {
-        foundSeparator = true;
-      } else if (foundSeparator && g.Elements?.Text) {
-        const texts = Array.isArray(g.Elements.Text) 
-          ? g.Elements.Text 
-          : [g.Elements.Text];
-        areas = areas.concat(texts);
-      }
-    });
-    return areas;
-  };
-
-  const antIcon = <LoadingOutlined style={{ fontSize: 24 }} spin />;
+  const antIcon = <LoadingOutlined style={{ fontSize: 36 }} spin />;
 
   if (loading) {
     return (
-      <div className="min-h-screen flex justify-center items-center bg-gray-100">
-        <Spin indicator={antIcon} tip="Loading lobby page data..." />
+      <div className="min-h-screen flex justify-center items-center bg-white">
+        <Spin indicator={antIcon} tip="Loading lobby page data..." size="large" />
       </div>
     );
   }
 
   if (!pageData) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen bg-white">
         <div className="p-8">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-red-700 max-w-2xl mx-auto">
             <p className="text-lg mb-3">No data available</p>
@@ -142,15 +132,13 @@ function LobbyPage() {
   }
 
   const pageTitle = pageData?.page?.PageTitle || 'Lobby Page';
-  const images = getAllImages(pageData);
-  const kpis = getKpis(pageData);
-  const businessAreas = getBusinessAreas(pageData);
+  const pageStructure = getPageStructure(pageData);
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-white">
       {/* Header */}
       <div className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-6">
-        <div className="px-8">
+        <div className="px-4 md:px-8 lg:px-12">
           <div className="flex items-center text-sm mb-3 opacity-90">
             <Link to="/" className="text-white hover:text-gray-200 flex items-center">
               <HomeOutlined className="mr-1" />
@@ -163,111 +151,136 @@ function LobbyPage() {
         </div>
       </div>
 
-      <div className="px-8 py-6">
-        {/* Images Section */}
-        {images.length > 0 && (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
-            {images.map((img, index) => (
-              <img
-                key={index}
-                className="w-full h-64 md:h-80 rounded-lg shadow-lg object-cover"
-                src={getImageUrl(img.Image)}
-                alt={img.Name || `Image ${index + 1}`}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* KPI Section */}
-        {kpis.length > 0 && (
-          <>
-            <div className="bg-gray-200 px-6 py-4 mb-6 rounded-lg font-semibold text-gray-800 flex items-center text-lg">
-              <LineChartOutlined className="mr-3 text-xl" />
-              KEY PERFORMANCE INDICATORS
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-              {kpis.map((kpi, index) => {
-                // Extract KPI ID and value from API data if available
-                const kpiId = kpi.ProjectionDataSource?.Filter?.split("'")[1];
-                const kpiApiData = pageData.kpiApiData;
-                const kpiApiVal = kpiApiData && kpiId && kpiApiData[kpiId] ? kpiApiData[kpiId] : {};
-                const value = typeof kpiApiVal.Measure !== "undefined" ? kpiApiVal.Measure : null;
-                
-                // Extract target from Footer
-                const targetMatch = kpi.Footer?.match(/TARGET: (\d+)%?/);
-                const target = targetMatch ? Number(targetMatch[1]) : null;
-                const suffix = kpi.Suffix || '';
-                
-                return (
-                  <div key={index} className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow">
-                    <div className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
-                      {kpi.Title || kpi.Name}
-                    </div>
-                    <div className={`text-4xl font-bold mb-2 ${getKpiColor(value, target)}`}>
-                      {value !== null ? value + suffix : '-'}
-                    </div>
-                    <div className="text-xs text-gray-500 uppercase">
-                      {kpi.Footer || ''}
-                    </div>
+      <div className="px-4 md:px-8 lg:px-12 py-6">
+        {/* Render page structure dynamically */}
+        {pageStructure.map((group, idx) => (
+          <div key={idx} className="mb-8">
+            {/* Render separator if it exists */}
+            {group.isSeparator && (
+              <div className="bg-gray-50 border-l-4 border-purple-600 px-6 py-4 mb-6 font-semibold text-gray-800 flex items-center text-lg">
+                <AppstoreOutlined className="mr-3 text-xl" />
+                {group.separatorTitle}
+              </div>
+            )}
+            
+            {/* Render images */}
+            {group.images.length > 0 && (
+              <div className={`grid ${group.images.length === 1 ? 'grid-cols-1' : 'grid-cols-1 xl:grid-cols-2'} gap-6 mb-6`}>
+                {group.images.map((img, imgIdx) => (
+                  <div key={imgIdx} className="relative group">
+                    {img.WebUrl ? (
+                      <Link 
+                        to={`/lobby/${accessToken}/${img.WebUrl.replace(/^\/+/, '').replace(/^lobby\//, '')}`}
+                        className="block"
+                      >
+                        <img
+                          className="w-full h-64 md:h-80 rounded-lg shadow-lg object-cover group-hover:shadow-xl transition-shadow"
+                          src={getImageUrl(img.Image)}
+                          alt={img.Name || `Image ${imgIdx + 1}`}
+                        />
+                        {img.Title && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6 rounded-b-lg">
+                            <h3 className="text-white text-xl font-semibold">{img.Title}</h3>
+                          </div>
+                        )}
+                      </Link>
+                    ) : (
+                      <img
+                        className="w-full h-64 md:h-80 rounded-lg shadow-lg object-cover"
+                        src={getImageUrl(img.Image)}
+                        alt={img.Name || `Image ${imgIdx + 1}`}
+                      />
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {/* Business Areas Section */}
-        {businessAreas.length > 0 && (
-          <>
-            <div className="bg-gray-200 px-6 py-4 mb-6 rounded-lg font-semibold text-gray-800 flex items-center text-lg">
-              <BankOutlined className="mr-3 text-xl" />
-              BUSINESS AREAS
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {businessAreas.map((area, index) => {
-                // Extract page ID from WebUrl
-                let targetPageId = area.WebUrl || '';
-                
-                // Remove any leading slashes or "lobby/" prefix
-                targetPageId = targetPageId.replace(/^\/+/, '').replace(/^lobby\//, '');
-                
-                // If it's an external URL (http/https), use regular anchor
-                if (targetPageId.startsWith('http')) {
+                ))}
+              </div>
+            )}
+            
+            {/* Render KPI counters */}
+            {group.counters.length > 0 && (
+              <>
+                {idx === 0 && (
+                  <div className="bg-gray-50 border-l-4 border-purple-600 px-6 py-4 mb-6 font-semibold text-gray-800 flex items-center text-lg">
+                    <LineChartOutlined className="mr-3 text-xl" />
+                    KEY PERFORMANCE INDICATORS
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
+                  {group.counters.map((kpi, kpiIdx) => {
+                    const kpiId = kpi.ProjectionDataSource?.Filter?.split("'")[1];
+                    const kpiApiData = pageData.kpiApiData;
+                    const kpiApiVal = kpiApiData && kpiId && kpiApiData[kpiId] ? kpiApiData[kpiId] : {};
+                    const value = typeof kpiApiVal.Measure !== "undefined" ? kpiApiVal.Measure : null;
+                    const targetMatch = kpi.Footer?.match(/TARGET: (\d+)%?/);
+                    const target = targetMatch ? Number(targetMatch[1]) : null;
+                    const suffix = kpi.Suffix || '';
+                    
+                    return (
+                      <div key={kpiIdx} className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow">
+                        <div className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+                          {kpi.Title || kpi.Name}
+                        </div>
+                        <div className={`text-4xl font-bold mb-2 ${getKpiColor(value, target)}`}>
+                          {value !== null ? value + suffix : '-'}
+                        </div>
+                        <div className="text-xs text-gray-500 uppercase">
+                          {kpi.Footer || ''}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+            
+            {/* Render text elements (navigation tiles) */}
+            {group.texts.length > 0 && (
+              <div className={`grid gap-6 ${
+                group.texts.length <= 2 ? 'grid-cols-1 md:grid-cols-2' :
+                group.texts.length === 3 ? 'grid-cols-1 md:grid-cols-3' :
+                group.texts.length === 4 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' :
+                'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+              }`}>
+                {group.texts.map((text, textIdx) => {
+                  let targetPageId = text.WebUrl || '';
+                  targetPageId = targetPageId.replace(/^\/+/, '').replace(/^lobby\//, '');
+                  
+                  if (targetPageId.startsWith('http')) {
+                    return (
+                      <a
+                        key={textIdx}
+                        href={targetPageId}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white p-8 rounded-lg text-center transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
+                      >
+                        <h5 className="text-xl font-semibold uppercase tracking-wide">{text.BodyText}</h5>
+                      </a>
+                    );
+                  }
+                  
                   return (
-                    <a
-                      key={index}
-                      href={targetPageId}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <Link
+                      key={textIdx}
+                      to={`/lobby/${accessToken}/${targetPageId}`}
                       className="block bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white p-8 rounded-lg text-center transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
                     >
-                      <h5 className="text-xl font-semibold uppercase tracking-wide">{area.BodyText}</h5>
-                    </a>
+                      <h5 className="text-xl font-semibold uppercase tracking-wide">{text.BodyText}</h5>
+                    </Link>
                   );
-                }
-                
-                // For internal navigation, use Link with token/pageId structure
-                return (
-                  <Link
-                    key={index}
-                    to={`/lobby/${accessToken}/${targetPageId}`}
-                    className="block bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white p-8 rounded-lg text-center transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
-                  >
-                    <h5 className="text-xl font-semibold uppercase tracking-wide">{area.BodyText}</h5>
-                  </Link>
-                );
-              })}
-            </div>
-          </>
-        )}
+                })}
+              </div>
+            )}
+          </div>
+        ))}
 
         {/* Show raw data toggle (optional) */}
-        <details className="mt-8 mb-4">
-          <summary className="cursor-pointer text-gray-600 hover:text-gray-800">
+        <details className="mt-12 mb-6">
+          <summary className="cursor-pointer text-gray-600 hover:text-gray-800 font-medium">
             View Raw JSON Data
           </summary>
-          <div className="mt-2 bg-white p-4 rounded shadow text-black">
-            <pre className="overflow-auto max-h-96 text-xs text-black">
+          <div className="mt-4 bg-white p-6 rounded-lg shadow-lg">
+            <pre className="overflow-auto max-h-96 text-xs text-gray-800">
               {JSON.stringify(pageData, null, 2)}
             </pre>
           </div>
