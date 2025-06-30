@@ -9,12 +9,21 @@ function LobbyPage() {
   const [loading, setLoading] = useState(true);
   const [kpiData, setKpiData] = useState({});
   const [kpiLoading, setKpiLoading] = useState({});
+  const [fetchError, setFetchError] = useState(null);
 
   const fetchLobbyPage = async () => {
-    if (!accessToken || !pageId) return;
+    if (!accessToken || !pageId) {
+      console.error("Missing accessToken or pageId:", { accessToken: !!accessToken, pageId });
+      message.error("Missing required parameters");
+      setFetchError("Missing required parameters");
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
+    setFetchError(null);
     try {
+      console.log("Fetching lobby page:", pageId);
       const res = await fetch(`/.netlify/functions/get-lobby-page/${pageId}`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -22,15 +31,25 @@ function LobbyPage() {
         },
       });
 
+      console.log("Response status:", res.status);
       const result = await res.json();
+      console.log("Response data:", result);
+
       if (res.ok && result?.data?.page) {
         setPageData(result.data);
         message.success("Lobby page data fetched");
+      } else if (res.ok && result?.data) {
+        // Handle case where data exists but not in expected structure
+        setPageData(result.data);
+        message.success("Lobby page data fetched");
       } else {
+        console.error("Failed to fetch lobby page:", result);
+        setFetchError(result.message || "Failed to fetch lobby page data.");
         message.error(result.message || "Failed to fetch lobby page data.");
       }
     } catch (err) {
       console.error("Lobby page fetch error:", err);
+      setFetchError(err.message || "Network error while fetching lobby page data.");
       message.error("Network error while fetching lobby page data.");
     } finally {
       setLoading(false);
@@ -79,7 +98,7 @@ function LobbyPage() {
 
   useEffect(() => {
     fetchLobbyPage();
-  }, [accessToken, pageId]);
+  }, [accessToken, pageId]); // Add proper dependencies
 
   // Fetch KPI data when page data is loaded
   useEffect(() => {
@@ -116,11 +135,17 @@ function LobbyPage() {
 
   // Helper: Extract all page elements organized by groups
   const getPageStructure = (data) => {
-    if (!data?.page?.Layout?.Groups?.Group) return [];
+    // Check different possible data structures
+    let pageLayout = data?.page?.Layout || data?.Layout || data?.layout;
     
-    const groups = Array.isArray(data.page.Layout.Groups.Group) 
-      ? data.page.Layout.Groups.Group 
-      : [data.page.Layout.Groups.Group];
+    if (!pageLayout?.Groups?.Group) {
+      console.warn("No groups found in page layout:", pageLayout);
+      return [];
+    }
+    
+    const groups = Array.isArray(pageLayout.Groups.Group) 
+      ? pageLayout.Groups.Group 
+      : [pageLayout.Groups.Group];
     
     const structure = [];
     
@@ -216,18 +241,34 @@ function LobbyPage() {
         <div className="p-8">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-red-700 max-w-2xl mx-auto">
             <p className="text-lg mb-3">No data available</p>
+            {fetchError && (
+              <p className="text-sm mb-3 font-semibold">Error: {fetchError}</p>
+            )}
+            <p className="text-sm mb-3">Page ID: {pageId}</p>
+            <p className="text-sm mb-3">Access Token: {accessToken ? 'Present' : 'Missing'}</p>
             <Link to="/" className="text-blue-600 hover:text-blue-800 inline-flex items-center font-medium">
               <HomeOutlined className="mr-2" />
               Back to Dashboard
             </Link>
+            <div className="mt-4">
+              <button 
+                onClick={() => fetchLobbyPage()} 
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  const pageTitle = pageData?.page?.PageTitle || 'Lobby Page';
+  const pageTitle = pageData?.page?.PageTitle || pageData?.PageTitle || pageData?.title || 'Lobby Page';
   const pageStructure = getPageStructure(pageData);
+
+  console.log("Page title:", pageTitle);
+  console.log("Page structure length:", pageStructure.length);
 
   return (
     <div className="min-h-screen bg-gray-50">
