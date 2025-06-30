@@ -245,8 +245,8 @@ function LobbyPage() {
           <summary className="cursor-pointer text-gray-600 hover:text-gray-800">
             View Raw JSON Data
           </summary>
-          <div className="mt-2 bg-white p-4 rounded shadow">
-            <pre className="overflow-auto max-h-96 text-xs font-black">
+          <div className="mt-2 bg-white p-4 rounded shadow text-black">
+            <pre className="overflow-auto max-h-96 text-xs text-black">
               {JSON.stringify(pageData, null, 2)}
             </pre>
           </div>
