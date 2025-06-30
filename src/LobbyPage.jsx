@@ -222,18 +222,36 @@ function LobbyPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               {businessAreas.map((area, index) => {
-                const url = area.WebUrl 
-                  ? (area.WebUrl.startsWith('http') ? area.WebUrl : '/' + area.WebUrl)
-                  : '#';
+                // Extract page ID from WebUrl
+                let targetPageId = area.WebUrl || '';
                 
+                // Remove any leading slashes or "lobby/" prefix
+                targetPageId = targetPageId.replace(/^\/+/, '').replace(/^lobby\//, '');
+                
+                // If it's an external URL (http/https), use regular anchor
+                if (targetPageId.startsWith('http')) {
+                  return (
+                    <a
+                      key={index}
+                      href={targetPageId}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block bg-purple-700 hover:bg-purple-800 text-white p-6 rounded-lg text-center transition-transform hover:-translate-y-1 shadow-md"
+                    >
+                      <h5 className="text-lg font-semibold">{area.BodyText}</h5>
+                    </a>
+                  );
+                }
+                
+                // For internal navigation, use Link with token/pageId structure
                 return (
-                  <a
+                  <Link
                     key={index}
-                    href={url}
+                    to={`/lobby/${accessToken}/${targetPageId}`}
                     className="block bg-purple-700 hover:bg-purple-800 text-white p-6 rounded-lg text-center transition-transform hover:-translate-y-1 shadow-md"
                   >
                     <h5 className="text-lg font-semibold">{area.BodyText}</h5>
-                  </a>
+                  </Link>
                 );
               })}
             </div>
