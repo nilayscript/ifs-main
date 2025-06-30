@@ -86,9 +86,9 @@ function LobbyPage() {
 
   // KPI color logic
   const getKpiColor = (val, target) => {
-    if (val === null || val === undefined || target === null || target === undefined) return '';
+    if (val === null || val === undefined || target === null || target === undefined) return 'text-gray-700';
     if (val >= target) return 'text-green-600';
-    if (val >= target * 0.9) return 'text-yellow-600';
+    if (val >= target * 0.9) return 'text-amber-600';
     return 'text-red-600';
   };
 
@@ -127,12 +127,15 @@ function LobbyPage() {
 
   if (!pageData) {
     return (
-      <div className="min-h-screen p-6 bg-gray-100">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-          <p>No data available</p>
-          <Link to="/" className="text-blue-600 hover:text-blue-800 mt-2 inline-block">
-            ← Back to Dashboard
-          </Link>
+      <div className="min-h-screen bg-gray-100">
+        <div className="p-8">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-red-700 max-w-2xl mx-auto">
+            <p className="text-lg mb-3">No data available</p>
+            <Link to="/" className="text-blue-600 hover:text-blue-800 inline-flex items-center font-medium">
+              <HomeOutlined className="mr-2" />
+              Back to Dashboard
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -146,9 +149,9 @@ function LobbyPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <div className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-4 mb-4">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center text-sm mb-2">
+      <div className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-6">
+        <div className="px-8">
+          <div className="flex items-center text-sm mb-3 opacity-90">
             <Link to="/" className="text-white hover:text-gray-200 flex items-center">
               <HomeOutlined className="mr-1" />
               Dashboard
@@ -156,18 +159,18 @@ function LobbyPage() {
             <span className="mx-2">/</span>
             <span>{pageTitle}</span>
           </div>
-          <h1 className="text-2xl font-bold">{pageTitle}</h1>
+          <h1 className="text-4xl font-bold uppercase tracking-wide">{pageTitle}</h1>
         </div>
       </div>
 
-      <div className="container mx-auto px-4">
+      <div className="px-8 py-6">
         {/* Images Section */}
         {images.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
             {images.map((img, index) => (
               <img
                 key={index}
-                className="w-full rounded-lg shadow-md object-cover"
+                className="w-full h-64 md:h-80 rounded-lg shadow-lg object-cover"
                 src={getImageUrl(img.Image)}
                 alt={img.Name || `Image ${index + 1}`}
               />
@@ -178,11 +181,11 @@ function LobbyPage() {
         {/* KPI Section */}
         {kpis.length > 0 && (
           <>
-            <div className="bg-gray-100 px-4 py-3 mb-4 rounded font-semibold text-gray-700 flex items-center">
-              <LineChartOutlined className="mr-2" />
+            <div className="bg-gray-200 px-6 py-4 mb-6 rounded-lg font-semibold text-gray-800 flex items-center text-lg">
+              <LineChartOutlined className="mr-3 text-xl" />
               KEY PERFORMANCE INDICATORS
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
               {kpis.map((kpi, index) => {
                 // Extract KPI ID and value from API data if available
                 const kpiId = kpi.ProjectionDataSource?.Filter?.split("'")[1];
@@ -196,14 +199,14 @@ function LobbyPage() {
                 const suffix = kpi.Suffix || '';
                 
                 return (
-                  <div key={index} className="bg-white rounded-lg p-5 shadow-sm">
-                    <div className="text-sm font-semibold text-gray-600 mb-2">
+                  <div key={index} className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow">
+                    <div className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
                       {kpi.Title || kpi.Name}
                     </div>
-                    <div className={`text-3xl font-bold mb-1 ${getKpiColor(value, target)}`}>
+                    <div className={`text-4xl font-bold mb-2 ${getKpiColor(value, target)}`}>
                       {value !== null ? value + suffix : '-'}
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 uppercase">
                       {kpi.Footer || ''}
                     </div>
                   </div>
@@ -216,11 +219,11 @@ function LobbyPage() {
         {/* Business Areas Section */}
         {businessAreas.length > 0 && (
           <>
-            <div className="bg-gray-100 px-4 py-3 mb-4 rounded font-semibold text-gray-700 flex items-center">
-              <BankOutlined className="mr-2" />
+            <div className="bg-gray-200 px-6 py-4 mb-6 rounded-lg font-semibold text-gray-800 flex items-center text-lg">
+              <BankOutlined className="mr-3 text-xl" />
               BUSINESS AREAS
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {businessAreas.map((area, index) => {
                 // Extract page ID from WebUrl
                 let targetPageId = area.WebUrl || '';
@@ -236,9 +239,9 @@ function LobbyPage() {
                       href={targetPageId}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block bg-purple-700 hover:bg-purple-800 text-white p-6 rounded-lg text-center transition-transform hover:-translate-y-1 shadow-md"
+                      className="block bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white p-8 rounded-lg text-center transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
                     >
-                      <h5 className="text-lg font-semibold">{area.BodyText}</h5>
+                      <h5 className="text-xl font-semibold uppercase tracking-wide">{area.BodyText}</h5>
                     </a>
                   );
                 }
@@ -248,9 +251,9 @@ function LobbyPage() {
                   <Link
                     key={index}
                     to={`/lobby/${accessToken}/${targetPageId}`}
-                    className="block bg-purple-700 hover:bg-purple-800 text-white p-6 rounded-lg text-center transition-transform hover:-translate-y-1 shadow-md"
+                    className="block bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white p-8 rounded-lg text-center transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
                   >
-                    <h5 className="text-lg font-semibold">{area.BodyText}</h5>
+                    <h5 className="text-xl font-semibold uppercase tracking-wide">{area.BodyText}</h5>
                   </Link>
                 );
               })}
