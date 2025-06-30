@@ -260,7 +260,10 @@ function LobbyPage() {
             
             {/* Render images */}
             {group.images.length > 0 && (
-              <div className={`grid ${group.images.length === 1 ? 'grid-cols-1' : 'grid-cols-1 xl:grid-cols-2'} gap-6 mb-6`}>
+              <div className={`grid ${
+                group.images.length === 1 ? 'grid-cols-1' : 
+                'grid-cols-1 xl:grid-cols-2'
+              } gap-6 mb-6`}>
                 {group.images.map((img, imgIdx) => (
                   <div key={imgIdx} className="relative group">
                     {img.WebUrl ? (
@@ -269,7 +272,7 @@ function LobbyPage() {
                         className="block"
                       >
                         <img
-                          className="w-full h-64 md:h-80 rounded-lg shadow-lg object-cover group-hover:shadow-xl transition-shadow"
+                          className="w-full h-64 md:h-96 lg:h-[500px] xl:h-[600px] rounded-lg shadow-lg object-cover group-hover:shadow-xl transition-shadow"
                           src={getAuthenticatedImageUrl(img.Image)}
                           alt={img.Name || `Image ${imgIdx + 1}`}
                           onError={(e) => {
@@ -284,7 +287,7 @@ function LobbyPage() {
                       </Link>
                     ) : (
                       <img
-                        className="w-full h-64 md:h-80 rounded-lg shadow-lg object-cover"
+                        className="w-full h-64 md:h-96 lg:h-[500px] xl:h-[600px] rounded-lg shadow-lg object-cover"
                         src={getAuthenticatedImageUrl(img.Image)}
                         alt={img.Name || `Image ${imgIdx + 1}`}
                         onError={(e) => {
