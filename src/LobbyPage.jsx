@@ -9,6 +9,8 @@ function LobbyPage() {
   const [loading, setLoading] = useState(true);
   const [kpiData, setKpiData] = useState({});
   const [kpiLoading, setKpiLoading] = useState({});
+  const [imageUrls, setImageUrls] = useState({}); // Store fetched image URLs
+  const [imageLoading, setImageLoading] = useState({}); // Track image loading states
 
   const fetchLobbyPage = async () => {
     if (!accessToken || !pageId) return;
@@ -70,6 +72,64 @@ function LobbyPage() {
     }
   };
 
+  // Helper: Build full image URL
+  const getImageUrl = (imgPath) => {
+    if (!imgPath) return '';
+    if (imgPath.startsWith('http')) return imgPath;
+    return 'https://ifsgcsc2-d02.demo.ifs.cloud' + imgPath;
+  };
+
+  // Fetch image with authorization and convert to blob URL
+  const fetchImageWithAuth = async (imagePath) => {
+    if (!imagePath || imageUrls[imagePath]) return; // Skip if already fetched
+    
+    const fullUrl = getImageUrl(imagePath);
+    setImageLoading(prev => ({ ...prev, [imagePath]: true }));
+    
+    try {
+      const response = await fetch(fullUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        setImageUrls(prev => ({
+          ...prev,
+          [imagePath]: objectUrl
+        }));
+      } else {
+        console.error(`Failed to fetch image: ${fullUrl}`);
+        // Set a placeholder or error image
+        setImageUrls(prev => ({
+          ...prev,
+          [imagePath]: '/placeholder-image.png' // You can use a default placeholder
+        }));
+      }
+    } catch (err) {
+      console.error(`Error fetching image ${fullUrl}:`, err);
+      setImageUrls(prev => ({
+        ...prev,
+        [imagePath]: '/placeholder-image.png'
+      }));
+    } finally {
+      setImageLoading(prev => ({ ...prev, [imagePath]: false }));
+    }
+  };
+
+  // Clean up blob URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      Object.values(imageUrls).forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, [imageUrls]);
+
   useEffect(() => {
     fetchLobbyPage();
   }, [accessToken, pageId]);
@@ -79,6 +139,14 @@ function LobbyPage() {
     if (pageData) {
       const structure = getPageStructure(pageData);
       structure.forEach(group => {
+        // Fetch images
+        group.images.forEach(img => {
+          if (img.Image) {
+            fetchImageWithAuth(img.Image);
+          }
+        });
+        
+        // Fetch KPI data
         group.counters.forEach(counter => {
           // Extract KPI ID from various possible sources
           let kpiId = null;
@@ -106,13 +174,6 @@ function LobbyPage() {
       });
     }
   }, [pageData]);
-
-  // Helper: Build full image URL
-  const getImageUrl = (imgPath) => {
-    if (!imgPath) return '';
-    if (imgPath.startsWith('http')) return imgPath;
-    return 'https://ifsgcsc2-d02.demo.ifs.cloud' + imgPath;
-  };
 
   // Helper: Extract all page elements organized by groups
   const getPageStructure = (data) => {
@@ -261,33 +322,52 @@ function LobbyPage() {
             {/* Render images */}
             {group.images.length > 0 && (
               <div className={`grid ${group.images.length === 1 ? 'grid-cols-1' : 'grid-cols-1 xl:grid-cols-2'} gap-6 mb-6`}>
-                {group.images.map((img, imgIdx) => (
-                  <div key={imgIdx} className="relative group">
-                    {img.WebUrl ? (
-                      <Link 
-                        to={`/lobby/${accessToken}/${img.WebUrl.replace(/^\/+/, '').replace(/^lobby\//, '')}`}
-                        className="block"
-                      >
-                        <img
-                          className="w-full h-64 md:h-80 rounded-lg shadow-lg object-cover group-hover:shadow-xl transition-shadow"
-                          src={getImageUrl(img.Image)}
-                          alt={img.Name || `Image ${imgIdx + 1}`}
-                        />
-                        {img.Title && (
-                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6 rounded-b-lg">
-                            <h3 className="text-white text-xl font-semibold">{img.Title}</h3>
-                          </div>
-                        )}
-                      </Link>
-                    ) : (
-                      <img
-                        className="w-full h-64 md:h-80 rounded-lg shadow-lg object-cover"
-                        src={getImageUrl(img.Image)}
-                        alt={img.Name || `Image ${imgIdx + 1}`}
-                      />
-                    )}
-                  </div>
-                ))}
+                {group.images.map((img, imgIdx) => {
+                  const isLoading = imageLoading[img.Image];
+                  const imageUrl = imageUrls[img.Image];
+                  
+                  return (
+                    <div key={imgIdx} className="relative group">
+                      {img.WebUrl ? (
+                        <Link 
+                          to={`/lobby/${accessToken}/${img.WebUrl.replace(/^\/+/, '').replace(/^lobby\//, '')}`}
+                          className="block"
+                        >
+                          {isLoading ? (
+                            <div className="w-full h-64 md:h-80 rounded-lg shadow-lg bg-gray-200 flex items-center justify-center">
+                              <LoadingOutlined className="text-4xl text-gray-400" />
+                            </div>
+                          ) : (
+                            <img
+                              className="w-full h-64 md:h-80 rounded-lg shadow-lg object-cover group-hover:shadow-xl transition-shadow"
+                              src={imageUrl || '/placeholder-image.png'}
+                              alt={img.Name || `Image ${imgIdx + 1}`}
+                            />
+                          )}
+                          {img.Title && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6 rounded-b-lg">
+                              <h3 className="text-white text-xl font-semibold">{img.Title}</h3>
+                            </div>
+                          )}
+                        </Link>
+                      ) : (
+                        <>
+                          {isLoading ? (
+                            <div className="w-full h-64 md:h-80 rounded-lg shadow-lg bg-gray-200 flex items-center justify-center">
+                              <LoadingOutlined className="text-4xl text-gray-400" />
+                            </div>
+                          ) : (
+                            <img
+                              className="w-full h-64 md:h-80 rounded-lg shadow-lg object-cover"
+                              src={imageUrl || '/placeholder-image.png'}
+                              alt={img.Name || `Image ${imgIdx + 1}`}
+                            />
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
             
