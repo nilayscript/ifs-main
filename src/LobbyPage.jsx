@@ -7,8 +7,8 @@ function LobbyPage() {
   const { accessToken, pageId } = useParams();
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [kpiData, setKpiData] = useState({});
-  const [kpiLoading, setKpiLoading] = useState({});
+  const [elementData, setElementData] = useState({});
+  const [elementLoading, setElementLoading] = useState({});
 
   const fetchLobbyPage = async () => {
     if (!accessToken || !pageId) return;
@@ -37,15 +37,17 @@ function LobbyPage() {
     }
   };
 
-  // Fetch individual KPI data
-  const fetchKpiData = async (kpiId) => {
-    if (!kpiId || kpiData[kpiId]) return; // Skip if already fetched
+  // Fetch data for elements with DataSourceId
+  const fetchElementData = async (dataSourceId, elementId) => {
+    if (!dataSourceId || elementData[elementId]) return;
     
-    setKpiLoading(prev => ({ ...prev, [kpiId]: true }));
+    setElementLoading(prev => ({ ...prev, [elementId]: true }));
     
     try {
+      // Here you would call your backend API to execute the data source query
+      // For now, we'll use the KPI endpoint as an example
       const res = await fetch(
-        `/.netlify/functions/get-kpi-data/${kpiId}`,
+        `/.netlify/functions/get-datasource-data/${dataSourceId}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -57,16 +59,16 @@ function LobbyPage() {
       if (res.ok) {
         const result = await res.json();
         if (result.data) {
-          setKpiData(prev => ({
+          setElementData(prev => ({
             ...prev,
-            [kpiId]: result.data
+            [elementId]: result.data
           }));
         }
       }
     } catch (err) {
-      console.error(`Error fetching KPI ${kpiId}:`, err);
+      console.error(`Error fetching data for element ${elementId}:`, err);
     } finally {
-      setKpiLoading(prev => ({ ...prev, [kpiId]: false }));
+      setElementLoading(prev => ({ ...prev, [elementId]: false }));
     }
   };
 
@@ -83,20 +85,29 @@ function LobbyPage() {
           // Extract KPI ID from various possible sources
           let kpiId = null;
           
-          // Try to get from DataSourceId first
-          if (counter.DataSourceId) {
-            kpiId = counter.DataSourceId;
-          }
-          // Try to get from ProjectionDataSource Filter
-          else if (counter.ProjectionDataSource?.Filter) {
-            const match = counter.ProjectionDataSource.Filter.match(/Id\s*=\s*['"]?(\d+)['"]?/i);
+          // Try to get from the element ID directly (common pattern)
+          if (counter.ID) {
+            // Extract numeric ID from strings like "kpi_132" or just "132"
+            const match = counter.ID.match(/(\d+)$/);
             if (match) {
               kpiId = match[1];
             }
           }
-          // Try to get from ID field
-          else if (counter.ID && /^\d+$/.test(counter.ID)) {
-            kpiId = counter.ID;
+          
+          // If not found, try DataSourceId
+          if (!kpiId && counter.DataSourceId) {
+            const match = counter.DataSourceId.match(/(\d+)/);
+            if (match) {
+              kpiId = match[1];
+            }
+          }
+          
+          // If still not found, try from Name
+          if (!kpiId && counter.Name) {
+            const match = counter.Name.match(/KPI_(\d+)/i);
+            if (match) {
+              kpiId = match[1];
+            }
           }
           
           if (kpiId) {
@@ -112,6 +123,19 @@ function LobbyPage() {
     if (!imgPath) return '';
     if (imgPath.startsWith('http')) return imgPath;
     return 'https://ifsgcsc2-d02.demo.ifs.cloud' + imgPath;
+  };
+
+  // Helper: Extract value from element data
+  const getElementValue = (elementId, mappedColumn) => {
+    const data = elementData[elementId];
+    if (!data || !data.value) return null;
+    
+    // Handle COUNT(*) or other mapped columns
+    if (mappedColumn && data.value[0]) {
+      return data.value[0][mappedColumn] || data.value[0]['COUNT'] || data.value[0]['Measure'] || null;
+    }
+    
+    return null;
   };
 
   // Helper: Extract all page elements organized by groups
@@ -204,7 +228,7 @@ function LobbyPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex justify-center items-center bg-white">
+      <div className="min-h-screen flex justify-center items-center bg-gray-900">
         <Spin indicator={antIcon} tip="Loading lobby page data..." size="large" />
       </div>
     );
@@ -212,11 +236,11 @@ function LobbyPage() {
 
   if (!pageData) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-gray-900">
         <div className="p-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-red-700 max-w-2xl mx-auto">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 text-gray-300 max-w-2xl mx-auto">
             <p className="text-lg mb-3">No data available</p>
-            <Link to="/" className="text-blue-600 hover:text-blue-800 inline-flex items-center font-medium">
+            <Link to="/" className="text-purple-400 hover:text-purple-300 inline-flex items-center font-medium">
               <HomeOutlined className="mr-2" />
               Back to Dashboard
             </Link>
@@ -230,19 +254,19 @@ function LobbyPage() {
   const pageStructure = getPageStructure(pageData);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-900">
       {/* Header */}
-      <div className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-6 shadow-lg">
+      <div className="bg-gray-800 text-white py-4 shadow-lg border-b border-gray-700">
         <div className="px-4 md:px-8 lg:px-12">
-          <div className="flex items-center text-sm mb-3 opacity-90">
-            <Link to="/" className="text-white hover:text-gray-200 flex items-center">
+          <div className="flex items-center text-xs mb-2 text-gray-400">
+            <Link to="/" className="text-gray-400 hover:text-white flex items-center">
               <HomeOutlined className="mr-1" />
               Dashboard
             </Link>
             <span className="mx-2">/</span>
             <span>{pageTitle}</span>
           </div>
-          <h1 className="text-4xl font-bold uppercase tracking-wide">{pageTitle}</h1>
+          <h1 className="text-2xl font-semibold">{pageTitle}</h1>
         </div>
       </div>
 
@@ -252,8 +276,8 @@ function LobbyPage() {
           <div key={idx} className="mb-8">
             {/* Render separator if it exists */}
             {group.isSeparator && group.separatorTitle && (
-              <div className="bg-gray-100 border-l-4 border-purple-600 px-6 py-4 mb-6 font-semibold text-gray-800 flex items-center text-lg">
-                <AppstoreOutlined className="mr-3 text-xl" />
+              <div className="bg-transparent border-l-4 border-purple-600 px-6 py-3 mb-6 font-medium text-gray-300 flex items-center">
+                <AppstoreOutlined className="mr-3 text-lg" />
                 {group.separatorTitle}
               </div>
             )}
@@ -293,63 +317,70 @@ function LobbyPage() {
             
             {/* Render KPI counters */}
             {group.counters.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
                 {group.counters.map((kpi, kpiIdx) => {
                   // Extract KPI ID
                   let kpiId = null;
-                  if (kpi.DataSourceId) {
-                    kpiId = kpi.DataSourceId;
-                  } else if (kpi.ProjectionDataSource?.Filter) {
-                    const match = kpi.ProjectionDataSource.Filter.match(/Id\s*=\s*['"]?(\d+)['"]?/i);
+                  if (kpi.ID) {
+                    const match = kpi.ID.match(/(\d+)$/);
                     if (match) {
                       kpiId = match[1];
                     }
-                  } else if (kpi.ID && /^\d+$/.test(kpi.ID)) {
-                    kpiId = kpi.ID;
+                  }
+                  if (!kpiId && kpi.DataSourceId) {
+                    const match = kpi.DataSourceId.match(/(\d+)/);
+                    if (match) {
+                      kpiId = match[1];
+                    }
+                  }
+                  if (!kpiId && kpi.Name) {
+                    const match = kpi.Name.match(/KPI_(\d+)/i);
+                    if (match) {
+                      kpiId = match[1];
+                    }
                   }
                   
                   // Get KPI data from API response
                   const apiData = kpiId ? kpiData[kpiId] : null;
                   const isLoadingKpi = kpiId ? kpiLoading[kpiId] : false;
                   
-                  // Use API data if available, otherwise fall back to local data
-                  const value = apiData?.Measure ?? null;
-                  const target = apiData?.Target ?? (kpi.Footer?.match(/TARGET: (\d+)%?/)?.[1] ? Number(kpi.Footer.match(/TARGET: (\d+)%?/)[1]) : null);
-                  const title = apiData?.Title || kpi.Title || kpi.Name;
-                  const suffix = kpi.Suffix || '';
+                  // Use API Measure value if available
+                  const value = apiData?.Measure || null;
+                  
+                  // Extract target from Footer
+                  const targetMatch = kpi.Footer?.match(/TARGET:\s*([\d.-]+)%?/i);
+                  const target = targetMatch ? targetMatch[1] : null;
+                  const suffix = kpi.Suffix || (kpi.Footer?.includes('%') ? '%' : '');
                   
                   return (
                     <div 
                       key={kpiIdx} 
-                      className="bg-white rounded-lg p-5 shadow-md hover:shadow-lg transition-shadow cursor-pointer relative"
-                      title={apiData?.Description || ''}
+                      className="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:border-gray-600 transition-all cursor-pointer"
+                      onClick={() => kpi.WebUrl && window.open(kpi.WebUrl, '_blank')}
                     >
-                      <div className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
-                        {title}
+                      <div className="text-xs font-medium text-gray-400 mb-4 uppercase">
+                        {kpi.Title || kpi.Name}
                       </div>
                       {isLoadingKpi ? (
                         <div className="flex items-center justify-center h-12">
-                          <LoadingOutlined className="text-2xl text-purple-600" />
+                          <LoadingOutlined className="text-2xl text-purple-500" />
                         </div>
                       ) : (
                         <>
-                          <div className={`text-3xl font-bold mb-1 ${getKpiColor(value, target)}`}>
-                            {value !== null ? value + suffix : '-'}
+                          <div className={`text-3xl font-bold mb-3 ${value ? 'text-orange-400' : 'text-gray-300'}`}>
+                            {value !== null ? (
+                              <>
+                                {value}
+                                {suffix && <span className="text-2xl ml-1">{suffix}</span>}
+                              </>
+                            ) : (
+                              '-'
+                            )}
                           </div>
-                          <div className="text-xs text-gray-500 uppercase">
-                            {target !== null ? `TARGET: ${target}${suffix}` : kpi.Footer || ''}
+                          <div className="text-xs text-gray-500">
+                            {kpi.Footer || (target ? `TARGET: ${target}${suffix}` : '')}
                           </div>
                         </>
-                      )}
-                      {apiData?.Benefits && (
-                        <div className="absolute top-2 right-2 group">
-                          <div className="w-4 h-4 rounded-full bg-gray-200 text-gray-600 text-xs flex items-center justify-center cursor-help">
-                            i
-                          </div>
-                          <div className="hidden group-hover:block absolute right-0 top-6 w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
-                            {apiData.Benefits}
-                          </div>
-                        </div>
                       )}
                     </div>
                   );
@@ -375,13 +406,29 @@ function LobbyPage() {
                             targetUrl = `/lobby/${accessToken}/${lobbyId}`;
                           }
                           
+                          // Get count value if DataSourceId exists
+                          const mappedColumn = link.ColumnMapping?.MappedColumns?.MappedColumn?.[0]?.Column;
+                          const count = link.DataSourceId ? getElementValue(link.ID, mappedColumn) : null;
+                          const isLoadingLink = link.DataSourceId ? elementLoading[link.ID] : false;
+                          
                           return (
                             <Link
                               key={linkIdx}
                               to={targetUrl}
-                              className="block px-4 py-3 bg-gray-50 hover:bg-purple-50 rounded-lg transition-colors text-gray-700 hover:text-purple-700 font-medium"
+                              className="block px-4 py-3 bg-gray-50 hover:bg-purple-50 rounded-lg transition-colors text-gray-700 hover:text-purple-700 font-medium flex items-center justify-between"
                             >
-                              → {link.LinkTitle}
+                              <span>→ {link.LinkTitle}</span>
+                              {link.DataSourceId && (
+                                <span className="ml-2 text-sm">
+                                  {isLoadingLink ? (
+                                    <LoadingOutlined className="text-purple-600" />
+                                  ) : (
+                                    <span className="bg-purple-600 text-white px-2 py-1 rounded-full text-xs font-bold">
+                                      {count || '0'}
+                                    </span>
+                                  )}
+                                </span>
+                              )}
                             </Link>
                           );
                         })}
@@ -460,9 +507,9 @@ function LobbyPage() {
                     <Link
                       key={textIdx}
                       to={`/lobby/${accessToken}/${targetPageId}`}
-                      className="block bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white p-8 rounded-lg text-center transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
+                      className="block bg-gradient-to-br from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white p-12 rounded-lg text-center transition-all duration-200 transform hover:scale-105 shadow-lg"
                     >
-                      <h5 className="text-xl font-semibold uppercase tracking-wide">{text.BodyText}</h5>
+                      <h5 className="text-xl font-medium tracking-wide">{text.BodyText}</h5>
                     </Link>
                   );
                 })}
