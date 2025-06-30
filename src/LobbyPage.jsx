@@ -7,6 +7,8 @@ function LobbyPage() {
   const { accessToken, pageId } = useParams();
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [kpiData, setKpiData] = useState({});
+  const [kpiLoading, setKpiLoading] = useState({});
 
   const fetchLobbyPage = async () => {
     if (!accessToken || !pageId) return;
@@ -35,9 +37,75 @@ function LobbyPage() {
     }
   };
 
+  // Fetch individual KPI data
+  const fetchKpiData = async (kpiId) => {
+    if (!kpiId || kpiData[kpiId]) return; // Skip if already fetched
+    
+    setKpiLoading(prev => ({ ...prev, [kpiId]: true }));
+    
+    try {
+      const res = await fetch(
+        `/.netlify/functions/get-kpi-data/${kpiId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (res.ok) {
+        const result = await res.json();
+        if (result.data) {
+          setKpiData(prev => ({
+            ...prev,
+            [kpiId]: result.data
+          }));
+        }
+      }
+    } catch (err) {
+      console.error(`Error fetching KPI ${kpiId}:`, err);
+    } finally {
+      setKpiLoading(prev => ({ ...prev, [kpiId]: false }));
+    }
+  };
+
   useEffect(() => {
     fetchLobbyPage();
   }, [accessToken, pageId]);
+
+  // Fetch KPI data when page data is loaded
+  useEffect(() => {
+    if (pageData) {
+      const structure = getPageStructure(pageData);
+      structure.forEach(group => {
+        group.counters.forEach(counter => {
+          // Extract KPI ID from various possible sources
+          let kpiId = null;
+          
+          // Try to get from DataSourceId first
+          if (counter.DataSourceId) {
+            kpiId = counter.DataSourceId;
+          }
+          // Try to get from ProjectionDataSource Filter
+          else if (counter.ProjectionDataSource?.Filter) {
+            const match = counter.ProjectionDataSource.Filter.match(/Id\s*=\s*['"]?(\d+)['"]?/i);
+            if (match) {
+              kpiId = match[1];
+            }
+          }
+          // Try to get from ID field
+          else if (counter.ID && /^\d+$/.test(counter.ID)) {
+            kpiId = counter.ID;
+          }
+          
+          if (kpiId) {
+            fetchKpiData(kpiId);
+          }
+        });
+      });
+    }
+  }, [pageData]);
 
   // Helper: Build full image URL
   const getImageUrl = (imgPath) => {
@@ -227,25 +295,62 @@ function LobbyPage() {
             {group.counters.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
                 {group.counters.map((kpi, kpiIdx) => {
-                  const kpiId = kpi.ProjectionDataSource?.Filter?.split("'")[1];
-                  const kpiApiData = pageData.kpiApiData;
-                  const kpiApiVal = kpiApiData && kpiId && kpiApiData[kpiId] ? kpiApiData[kpiId] : {};
-                  const value = typeof kpiApiVal.Measure !== "undefined" ? kpiApiVal.Measure : null;
-                  const targetMatch = kpi.Footer?.match(/TARGET: (\d+)%?/);
-                  const target = targetMatch ? Number(targetMatch[1]) : null;
+                  // Extract KPI ID
+                  let kpiId = null;
+                  if (kpi.DataSourceId) {
+                    kpiId = kpi.DataSourceId;
+                  } else if (kpi.ProjectionDataSource?.Filter) {
+                    const match = kpi.ProjectionDataSource.Filter.match(/Id\s*=\s*['"]?(\d+)['"]?/i);
+                    if (match) {
+                      kpiId = match[1];
+                    }
+                  } else if (kpi.ID && /^\d+$/.test(kpi.ID)) {
+                    kpiId = kpi.ID;
+                  }
+                  
+                  // Get KPI data from API response
+                  const apiData = kpiId ? kpiData[kpiId] : null;
+                  const isLoadingKpi = kpiId ? kpiLoading[kpiId] : false;
+                  
+                  // Use API data if available, otherwise fall back to local data
+                  const value = apiData?.Measure ?? null;
+                  const target = apiData?.Target ?? (kpi.Footer?.match(/TARGET: (\d+)%?/)?.[1] ? Number(kpi.Footer.match(/TARGET: (\d+)%?/)[1]) : null);
+                  const title = apiData?.Title || kpi.Title || kpi.Name;
                   const suffix = kpi.Suffix || '';
                   
                   return (
-                    <div key={kpiIdx} className="bg-white rounded-lg p-5 shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+                    <div 
+                      key={kpiIdx} 
+                      className="bg-white rounded-lg p-5 shadow-md hover:shadow-lg transition-shadow cursor-pointer relative"
+                      title={apiData?.Description || ''}
+                    >
                       <div className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
-                        {kpi.Title || kpi.Name}
+                        {title}
                       </div>
-                      <div className={`text-3xl font-bold mb-1 ${getKpiColor(value, target)}`}>
-                        {value !== null ? value + suffix : '-'}
-                      </div>
-                      <div className="text-xs text-gray-500 uppercase">
-                        {kpi.Footer || ''}
-                      </div>
+                      {isLoadingKpi ? (
+                        <div className="flex items-center justify-center h-12">
+                          <LoadingOutlined className="text-2xl text-purple-600" />
+                        </div>
+                      ) : (
+                        <>
+                          <div className={`text-3xl font-bold mb-1 ${getKpiColor(value, target)}`}>
+                            {value !== null ? value + suffix : '-'}
+                          </div>
+                          <div className="text-xs text-gray-500 uppercase">
+                            {target !== null ? `TARGET: ${target}${suffix}` : kpi.Footer || ''}
+                          </div>
+                        </>
+                      )}
+                      {apiData?.Benefits && (
+                        <div className="absolute top-2 right-2 group">
+                          <div className="w-4 h-4 rounded-full bg-gray-200 text-gray-600 text-xs flex items-center justify-center cursor-help">
+                            i
+                          </div>
+                          <div className="hidden group-hover:block absolute right-0 top-6 w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
+                            {apiData.Benefits}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
