@@ -28,7 +28,7 @@ class HybridStorage {
 const oidcConfig = {
   authority: "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021",
   client_id: "IFS_digisigns",
-  redirect_uri: "https://astonishing-daifuku-9ff151.netlify.app/callback",
+  redirect_uri: "https://ifsmain.netlify.app/callback",
   response_type: "code",
   scope: "openid microprofile-jwt",
   post_logout_redirect_uri: "https://ifsgcsc2-d02.demo.ifs.cloud/redirect",
@@ -43,7 +43,7 @@ const oidcConfig = {
     authorization_endpoint:
       "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/auth",
     token_endpoint:
-      "https://astonishing-daifuku-9ff151.netlify.app/.netlify/functions/token-exchange",
+      "https://ifsmain.netlify.app/.netlify/functions/token-exchange",
     userinfo_endpoint:
       "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/userinfo",
     end_session_endpoint:
@@ -353,8 +353,7 @@ function Callback({ setUser, setTokens }) {
               grant_type: "authorization_code",
               client_id: "IFS_digisigns",
               code: code,
-              redirect_uri:
-                "https://astonishing-daifuku-9ff151.netlify.app/callback",
+              redirect_uri: "https://ifsmain.netlify.app/callback",
               code_verifier: codeVerifier,
             }),
           }
