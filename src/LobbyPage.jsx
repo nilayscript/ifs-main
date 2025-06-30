@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { message, Spin } from "antd";
-import { LoadingOutlined, HomeOutlined, LineChartOutlined, BuildingOutlined } from "@ant-design/icons";
+import { LoadingOutlined, HomeOutlined, LineChartOutlined, BankOutlined } from "@ant-design/icons";
 
 function LobbyPage() {
   const { accessToken, pageId } = useParams();
@@ -217,7 +217,7 @@ function LobbyPage() {
         {businessAreas.length > 0 && (
           <>
             <div className="bg-gray-100 px-4 py-3 mb-4 rounded font-semibold text-gray-700 flex items-center">
-              <BuildingOutlined className="mr-2" />
+              <BankOutlined className="mr-2" />
               BUSINESS AREAS
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
