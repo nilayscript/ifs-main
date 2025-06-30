@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { message, Spin } from "antd";
-import { LoadingOutlined, HomeOutlined, LineChartOutlined, BankOutlined, AppstoreOutlined } from "@ant-design/icons";
+import { LoadingOutlined, HomeOutlined, LineChartOutlined, BankOutlined, AppstoreOutlined, BarChartOutlined, UnorderedListOutlined, LinkOutlined } from "@ant-design/icons";
 
 function LobbyPage() {
   const { accessToken, pageId } = useParams();
@@ -64,7 +64,10 @@ function LobbyPage() {
         separatorId: group.SeparatorId || '',
         images: [],
         texts: [],
-        counters: []
+        counters: [],
+        linksList: [],
+        barCharts: [],
+        lists: []
       };
       
       // Extract images
@@ -89,6 +92,30 @@ function LobbyPage() {
           ? group.Elements.Counter 
           : [group.Elements.Counter];
         groupData.counters = counters;
+      }
+      
+      // Extract links lists
+      if (group.Elements?.LinksList) {
+        const linksLists = Array.isArray(group.Elements.LinksList) 
+          ? group.Elements.LinksList 
+          : [group.Elements.LinksList];
+        groupData.linksList = linksLists;
+      }
+      
+      // Extract bar charts
+      if (group.Elements?.BarChart) {
+        const barCharts = Array.isArray(group.Elements.BarChart) 
+          ? group.Elements.BarChart 
+          : [group.Elements.BarChart];
+        groupData.barCharts = barCharts;
+      }
+      
+      // Extract lists
+      if (group.Elements?.List) {
+        const lists = Array.isArray(group.Elements.List) 
+          ? group.Elements.List 
+          : [group.Elements.List];
+        groupData.lists = lists;
       }
       
       structure.push(groupData);
@@ -135,9 +162,9 @@ function LobbyPage() {
   const pageStructure = getPageStructure(pageData);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-6">
+      <div className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-6 shadow-lg">
         <div className="px-4 md:px-8 lg:px-12">
           <div className="flex items-center text-sm mb-3 opacity-90">
             <Link to="/" className="text-white hover:text-gray-200 flex items-center">
@@ -156,8 +183,8 @@ function LobbyPage() {
         {pageStructure.map((group, idx) => (
           <div key={idx} className="mb-8">
             {/* Render separator if it exists */}
-            {group.isSeparator && (
-              <div className="bg-gray-50 border-l-4 border-purple-600 px-6 py-4 mb-6 font-semibold text-gray-800 flex items-center text-lg">
+            {group.isSeparator && group.separatorTitle && (
+              <div className="bg-gray-100 border-l-4 border-purple-600 px-6 py-4 mb-6 font-semibold text-gray-800 flex items-center text-lg">
                 <AppstoreOutlined className="mr-3 text-xl" />
                 {group.separatorTitle}
               </div>
@@ -198,39 +225,104 @@ function LobbyPage() {
             
             {/* Render KPI counters */}
             {group.counters.length > 0 && (
-              <>
-                {idx === 0 && (
-                  <div className="bg-gray-50 border-l-4 border-purple-600 px-6 py-4 mb-6 font-semibold text-gray-800 flex items-center text-lg">
-                    <LineChartOutlined className="mr-3 text-xl" />
-                    KEY PERFORMANCE INDICATORS
-                  </div>
-                )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
-                  {group.counters.map((kpi, kpiIdx) => {
-                    const kpiId = kpi.ProjectionDataSource?.Filter?.split("'")[1];
-                    const kpiApiData = pageData.kpiApiData;
-                    const kpiApiVal = kpiApiData && kpiId && kpiApiData[kpiId] ? kpiApiData[kpiId] : {};
-                    const value = typeof kpiApiVal.Measure !== "undefined" ? kpiApiVal.Measure : null;
-                    const targetMatch = kpi.Footer?.match(/TARGET: (\d+)%?/);
-                    const target = targetMatch ? Number(targetMatch[1]) : null;
-                    const suffix = kpi.Suffix || '';
-                    
-                    return (
-                      <div key={kpiIdx} className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow">
-                        <div className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
-                          {kpi.Title || kpi.Name}
-                        </div>
-                        <div className={`text-4xl font-bold mb-2 ${getKpiColor(value, target)}`}>
-                          {value !== null ? value + suffix : '-'}
-                        </div>
-                        <div className="text-xs text-gray-500 uppercase">
-                          {kpi.Footer || ''}
-                        </div>
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
+                {group.counters.map((kpi, kpiIdx) => {
+                  const kpiId = kpi.ProjectionDataSource?.Filter?.split("'")[1];
+                  const kpiApiData = pageData.kpiApiData;
+                  const kpiApiVal = kpiApiData && kpiId && kpiApiData[kpiId] ? kpiApiData[kpiId] : {};
+                  const value = typeof kpiApiVal.Measure !== "undefined" ? kpiApiVal.Measure : null;
+                  const targetMatch = kpi.Footer?.match(/TARGET: (\d+)%?/);
+                  const target = targetMatch ? Number(targetMatch[1]) : null;
+                  const suffix = kpi.Suffix || '';
+                  
+                  return (
+                    <div key={kpiIdx} className="bg-white rounded-lg p-5 shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+                      <div className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                        {kpi.Title || kpi.Name}
                       </div>
-                    );
-                  })}
-                </div>
-              </>
+                      <div className={`text-3xl font-bold mb-1 ${getKpiColor(value, target)}`}>
+                        {value !== null ? value + suffix : '-'}
+                      </div>
+                      <div className="text-xs text-gray-500 uppercase">
+                        {kpi.Footer || ''}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* Render Links Lists */}
+            {group.linksList.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {group.linksList.map((linksList, listIdx) => (
+                  <div key={listIdx} className="bg-white rounded-lg shadow-md p-6">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                      <LinkOutlined className="mr-2" />
+                      {linksList.Title || 'Links'}
+                    </h3>
+                    {linksList.Links?.Link && (
+                      <div className="space-y-2">
+                        {(Array.isArray(linksList.Links.Link) ? linksList.Links.Link : [linksList.Links.Link]).map((link, linkIdx) => {
+                          let targetUrl = link.WebUrl || '#';
+                          if (targetUrl.includes('lobby/') && !targetUrl.startsWith('http')) {
+                            const lobbyId = targetUrl.split('lobby/')[1].split('?')[0];
+                            targetUrl = `/lobby/${accessToken}/${lobbyId}`;
+                          }
+                          
+                          return (
+                            <Link
+                              key={linkIdx}
+                              to={targetUrl}
+                              className="block px-4 py-3 bg-gray-50 hover:bg-purple-50 rounded-lg transition-colors text-gray-700 hover:text-purple-700 font-medium"
+                            >
+                              → {link.LinkTitle}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Render Bar Charts */}
+            {group.barCharts.length > 0 && (
+              <div className="grid grid-cols-1 gap-6 mb-6">
+                {group.barCharts.map((chart, chartIdx) => (
+                  <div key={chartIdx} className="bg-white rounded-lg shadow-md p-6">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                      <BarChartOutlined className="mr-2" />
+                      {chart.Title || 'Chart'}
+                    </h3>
+                    <div className="text-gray-500 text-center py-8">
+                      Chart visualization would appear here
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Render Lists */}
+            {group.lists.length > 0 && (
+              <div className="grid grid-cols-1 gap-6 mb-6">
+                {group.lists.map((list, listIdx) => (
+                  <div key={listIdx} className="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div className="px-6 py-4 bg-gray-50 border-b">
+                      <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                        <UnorderedListOutlined className="mr-2" />
+                        {list.Title || 'List'}
+                      </h3>
+                    </div>
+                    <div className="p-4">
+                      <div className="text-gray-500 text-center py-4">
+                        Data table would appear here
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
             
             {/* Render text elements (navigation tiles) */}
