@@ -1,49 +1,68 @@
-import React, { useState, useEffect } from 'react';
-import { message, Spin } from 'antd';
-import { LoadingOutlined } from '@ant-design/icons';
-import { UserManager } from 'oidc-client-ts';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { message, Spin } from "antd";
+import { LoadingOutlined } from "@ant-design/icons";
+import { UserManager, WebStorageStateStore } from "oidc-client-ts";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useNavigate,
+} from "react-router-dom";
+import LobbyPage from "./LobbyPage";
+
+class HybridStorage {
+  getItem(key) {
+    return sessionStorage.getItem(key) || localStorage.getItem(key);
+  }
+
+  setItem(key, value) {
+    sessionStorage.setItem(key, value);
+  }
+
+  removeItem(key) {
+    sessionStorage.removeItem(key);
+    localStorage.removeItem(key);
+  }
+}
 
 const oidcConfig = {
-  authority: 'https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021',
-  client_id: 'IFS_digisigns',
-  redirect_uri: 'https://astonishing-daifuku-9ff151.netlify.app/callback',
-  response_type: 'code',
-  scope: 'openid microprofile-jwt',
-  post_logout_redirect_uri: 'https://ifsgcsc2-d02.demo.ifs.cloud/redirect',
+  authority: "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021",
+  client_id: "IFS_digisigns",
+  redirect_uri: "https://astonishing-daifuku-9ff151.netlify.app/callback",
+  response_type: "code",
+  scope: "openid microprofile-jwt",
+  post_logout_redirect_uri: "https://ifsgcsc2-d02.demo.ifs.cloud/redirect",
   automaticSilentRenew: false,
   loadUserInfo: false,
-  // Enable PKCE
-  response_mode: 'query',
-  // Override metadata to use our proxy for token endpoint
+  response_mode: "query",
+  stateTimeInSeconds: 600, // 10 minutes
+  userStore: new WebStorageStateStore({ store: new HybridStorage() }),
   metadataUrl: null,
   metadata: {
-    issuer: 'https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021',
+    issuer: "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021",
     authorization_endpoint:
-      'https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/auth',
+      "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/auth",
     token_endpoint:
-      'https://astonishing-daifuku-9ff151.netlify.app/.netlify/functions/token-exchange',
+      "https://astonishing-daifuku-9ff151.netlify.app/.netlify/functions/token-exchange",
     userinfo_endpoint:
-      'https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/userinfo',
+      "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/userinfo",
     end_session_endpoint:
-      'https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/logout',
+      "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/logout",
     check_session_iframe:
-      'https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/login-status-iframe.html',
+      "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/login-status-iframe.html",
     revocation_endpoint:
-      'https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/revoke',
+      "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/revoke",
     introspection_endpoint:
-      'https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/token/introspect',
+      "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/token/introspect",
     jwks_uri:
-      'https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/certs',
-    response_types_supported: ['code'],
-    grant_types_supported: ['authorization_code', 'refresh_token'],
-    subject_types_supported: ['public'],
-    id_token_signing_alg_values_supported: ['RS256'],
-    code_challenge_methods_supported: ['S256'],
+      "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/certs",
+    response_types_supported: ["code"],
+    grant_types_supported: ["authorization_code", "refresh_token"],
+    subject_types_supported: ["public"],
+    id_token_signing_alg_values_supported: ["RS256"],
+    code_challenge_methods_supported: ["S256"],
   },
 };
-
-const BASE_URL = 'https://api.v2.digisigns.in/api/v1';
 
 const userManager = new UserManager(oidcConfig);
 
@@ -54,37 +73,47 @@ function App() {
   const [loadingLobbies, setLoadingLobbies] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const handleLogin = () => userManager.signinRedirect();
+  const handleLogin = async () => {
+    const user = await userManager.getUser();
+    if (user && !user.expired) {
+      setUser(user);
+      setTokens({
+        access_token: user.access_token,
+        refresh_token: user.refresh_token,
+      });
+    } else {
+      await userManager.signinRedirect();
+    }
+  };
+
   const handleLogout = () => userManager.signoutRedirect();
 
   const refreshTokens = async () => {
     setRefreshing(true);
     try {
       const res = await fetch(`/.netlify/functions/token-exchange`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          client_id: 'IFS_digisigns',
+          client_id: "IFS_digisigns",
           refresh_token: tokens.refresh_token,
-          grant_type: 'refresh_token',
+          grant_type: "refresh_token",
         }),
       });
 
       const result = await res.json();
-      console.log('Refresh Response:', result);
-
       if (result?.access_token) {
         setTokens({
           access_token: result.access_token,
           refresh_token: result.refresh_token || tokens.refresh_token,
         });
-        message.success('Token refreshed!');
+        message.success("Token refreshed!");
       } else {
-        message.error(result.message || 'Token refresh failed.');
+        message.error(result.message || "Token refresh failed.");
       }
     } catch (err) {
-      console.error('Token refresh error:', err);
-      message.error('Error refreshing token.');
+      console.error("Token refresh error:", err);
+      message.error("Error refreshing token.");
     } finally {
       setRefreshing(false);
     }
@@ -98,7 +127,7 @@ function App() {
       const res = await fetch(`/.netlify/functions/get-lobbies`, {
         headers: {
           Authorization: `Bearer ${tokens.access_token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
@@ -106,13 +135,13 @@ function App() {
 
       if (res.ok && result?.data?.pages) {
         setLobbies(result.data.pages);
-        message.success('Lobbies fetched');
+        message.success("Lobbies fetched");
       } else {
-        message.error(result.message || 'Failed to fetch lobbies.');
+        message.error(result.message || "Failed to fetch lobbies.");
       }
     } catch (err) {
-      console.error('Lobby fetch error:', err);
-      message.error('Network error while fetching lobbies.');
+      console.error("Lobby fetch error:", err);
+      message.error("Network error while fetching lobbies.");
     } finally {
       setLoadingLobbies(false);
     }
@@ -151,10 +180,15 @@ function App() {
               loadingLobbies={loadingLobbies}
               lobbies={lobbies}
               antIcon={antIcon}
+              tokens={tokens}
             />
           }
         />
-        <Route path="/callback" element={<Callback setUser={setUser} setTokens={setTokens} />} />
+        <Route
+          path="/callback"
+          element={<Callback setUser={setUser} setTokens={setTokens} />}
+        />
+        <Route path={`/lobby/:accessToken/:pageId`} element={<LobbyPage />} />
       </Routes>
     </Router>
   );
@@ -169,7 +203,10 @@ function Layout({
   loadingLobbies,
   lobbies,
   antIcon,
+  tokens,
 }) {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen w-[100vw] bg-gray-50 p-4">
       <div className="max-w-5xl mx-auto">
@@ -189,19 +226,21 @@ function Layout({
               </div>
               <button
                 style={{
-                  background: 'white',
-                  outline: 'none',
-                  border: 'none',
+                  background: "white",
+                  outline: "none",
+                  border: "none",
                 }}
                 onClick={refreshTokens}
                 disabled={refreshing}
               >
                 {refreshing && <Spin indicator={antIcon} size="small" />}
-                {!refreshing && 'Refresh Token'}
+                {!refreshing && "Refresh Token"}
               </button>
             </div>
             <div>
-              <h2 className="text-2xl font-semibold text-gray-800 mb-4">Lobbies</h2>
+              <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+                Lobbies
+              </h2>
               {loadingLobbies ? (
                 <div className="flex justify-center items-center py-20">
                   <Spin indicator={antIcon} tip="Loading lobbies..." />
@@ -211,12 +250,24 @@ function Layout({
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {lobbies.map((lobby, index) => (
-                    <div key={index} className="p-4 bg-white shadow rounded">
+                    <div
+                      key={index}
+                      className="p-4 bg-white shadow rounded cursor-pointer"
+                      onClick={() => {
+                        navigate(
+                          `/lobby/${tokens?.access_token}/${lobby.pageId}`
+                        );
+                      }}
+                    >
                       <h3 className="text-lg font-semibold text-gray-900 mb-1">
                         {lobby.pageTitle}
                       </h3>
-                      <p className="text-xs text-gray-500">Page ID: {lobby.pageId}</p>
-                      <p className="text-xs text-gray-400">Keywords: {lobby.keywords || 'N/A'}</p>
+                      <p className="text-xs text-gray-500">
+                        Page ID: {lobby.pageId}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        Keywords: {lobby.keywords || "N/A"}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -246,98 +297,114 @@ function Callback({ setUser, setTokens }) {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Try to use the OIDC library's built-in callback handler first
-        const user = await userManager.signinRedirectCallback();
-
-        if (user) {
-          setUser(user);
-          setTokens({
-            access_token: user.access_token,
-            refresh_token: user.refresh_token,
-          });
-          message.success('Login successful!');
-          navigate('/');
-          return;
-        }
-      } catch (oidcError) {
-        console.error('OIDC callback error:', oidcError);
-
-        // Fallback to manual token exchange
+        // First try the standard OIDC callback
         try {
-          // Get the authorization code from URL
-          const urlParams = new URLSearchParams(window.location.search);
-          const code = urlParams.get('code');
-
-          if (!code) {
-            throw new Error('No authorization code found');
+          const user = await userManager.signinRedirectCallback();
+          if (user) {
+            setUser(user);
+            setTokens({
+              access_token: user.access_token,
+              refresh_token: user.refresh_token,
+            });
+            message.success("Login successful!");
+            navigate("/");
+            return;
           }
+        } catch (oidcError) {
+          console.warn(
+            "Standard OIDC callback failed, falling back to manual",
+            oidcError
+          );
+        }
 
-          // Get the PKCE code verifier from session storage
-          const codeVerifier = sessionStorage.getItem('oidc.code_verifier');
+        // Manual fallback
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get("code");
+        const state = urlParams.get("state");
 
-          if (!codeVerifier) {
-            throw new Error('PKCE code verifier not found. Please login again.');
-          }
+        if (!code) {
+          throw new Error("No authorization code found in callback URL");
+        }
 
-          // Exchange code for tokens using Netlify function
-          const tokenResponse = await fetch('/.netlify/functions/token-exchange', {
-            method: 'POST',
+        // Try to recover the PKCE verifier from storage
+        const storageKey = `oidc.code_verifier`;
+        let codeVerifier = sessionStorage.getItem(storageKey);
+
+        // If not found in sessionStorage, check localStorage as fallback
+        if (!codeVerifier) {
+          codeVerifier = localStorage.getItem(storageKey);
+        }
+
+        if (!codeVerifier) {
+          throw new Error(
+            "PKCE code verifier not found. The login session may have expired. Please try logging in again."
+          );
+        }
+
+        // Exchange code for tokens using Netlify function
+        const tokenResponse = await fetch(
+          "/.netlify/functions/token-exchange",
+          {
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              grant_type: 'authorization_code',
-              client_id: 'IFS_digisigns',
+              grant_type: "authorization_code",
+              client_id: "IFS_digisigns",
               code: code,
-              redirect_uri: 'https://astonishing-daifuku-9ff151.netlify.app/callback',
+              redirect_uri:
+                "https://astonishing-daifuku-9ff151.netlify.app/callback",
               code_verifier: codeVerifier,
             }),
-          });
-
-          const tokenText = await tokenResponse.text();
-          console.log('Token response status:', tokenResponse.status);
-          console.log('Token response:', tokenText);
-
-          if (!tokenResponse.ok) {
-            throw new Error(`Token exchange failed: ${tokenText}`);
           }
+        );
 
-          const tokenData = JSON.parse(tokenText);
+        const tokenText = await tokenResponse.text();
+        console.log("Token response status:", tokenResponse.status);
+        console.log("Token response:", tokenText);
 
-          // Decode the ID token to get user profile
-          const idTokenParts = tokenData.id_token.split('.');
-          const profile = JSON.parse(atob(idTokenParts[1]));
-
-          const user = {
-            access_token: tokenData.access_token,
-            refresh_token: tokenData.refresh_token,
-            id_token: tokenData.id_token,
-            token_type: tokenData.token_type,
-            profile: {
-              preferred_username: profile.preferred_username || profile.sub,
-              sub: profile.sub,
-            },
-            expires_at: Math.floor(Date.now() / 1000) + (tokenData.expires_in || 3600),
-          };
-
-          setUser(user);
-          setTokens({
-            access_token: tokenData.access_token,
-            refresh_token: tokenData.refresh_token,
-          });
-
-          // Store in session for the OIDC library
-          await userManager.storeUser(user);
-
-          message.success('Login successful!');
-          navigate('/');
-        } catch (error) {
-          console.error('Manual callback error:', error);
-          message.error('Login failed: ' + error.message);
-          navigate('/');
+        if (!tokenResponse.ok) {
+          throw new Error(`Token exchange failed: ${tokenText}`);
         }
+
+        const tokenData = JSON.parse(tokenText);
+
+        // Decode the ID token to get user profile
+        const idTokenParts = tokenData.id_token.split(".");
+        const profile = JSON.parse(atob(idTokenParts[1]));
+
+        const user = {
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token,
+          id_token: tokenData.id_token,
+          token_type: tokenData.token_type,
+          profile: {
+            preferred_username: profile.preferred_username || profile.sub,
+            sub: profile.sub,
+          },
+          expires_at:
+            Math.floor(Date.now() / 1000) + (tokenData.expires_in || 3600),
+        };
+
+        setUser(user);
+        setTokens({
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token,
+        });
+
+        // Store in session for the OIDC library
+        await userManager.storeUser(user);
+
+        message.success("Login successful!");
+        navigate("/");
+      } catch (error) {
+        console.error("Login failed:", error);
+        message.error(`Login failed: ${error.message}`);
+        navigate("/");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     handleCallback();
