@@ -242,7 +242,7 @@ function Layout({
                 Lobbies
               </h2>
               {loadingLobbies ? (
-                <div className="flex flex-col justify-center items-center py-20 w-[100vw] h-[100vh] bg-white">
+                <div className="flex flex-col gap-2 justify-center items-center py-20 w-[100vw] h-[100vh] bg-white">
                   <Spin indicator={antIcon} />
                   <p className="text-[18px] font-[500] text-black">
                     Loading lobbies...
