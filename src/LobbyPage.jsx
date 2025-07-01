@@ -288,11 +288,11 @@ function LobbyPage() {
   const pageStructure = getPageStructure(pageData);
 
   return (
-    <div className="min-h-screen bg-gray-50 w-[100w]">
+    <div className="min-h-screen bg-gray-50 w-[100vw]">
       <ObjectCards />
       <div className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-6 shadow-lg w-full">
-        <div className="px-4 md:px-8 lg:px-12">
-          <div className="flex items-center text-sm mb-3 opacity-90">
+        <div className="px-4 md:px-8 lg:px-12 w-full">
+          <div className="flex items-center text-sm mb-3 opacity-90 w-full">
             <Link
               to="/"
               className="text-white hover:text-gray-200 flex items-center"
@@ -311,7 +311,7 @@ function LobbyPage() {
 
       <div className="px-4 md:px-8 lg:px-12 py-6 w-full">
         {pageStructure.map((group, idx) => (
-          <div key={idx} className="mb-8">
+          <div key={idx} className="mb-8 w-full">
             {group.isSeparator && group.separatorTitle && (
               <div className="bg-gray-100 border-l-4 border-purple-600 px-6 py-4 mb-6 font-semibold text-gray-800 flex items-center text-lg">
                 <AppstoreOutlined className="mr-3 text-xl" />
@@ -325,10 +325,10 @@ function LobbyPage() {
                   group.images.length === 1
                     ? "grid-cols-1"
                     : "grid-cols-1 xl:grid-cols-2"
-                } gap-6 mb-6`}
+                } gap-6 mb-6 w-full`}
               >
                 {group.images.map((img, imgIdx) => (
-                  <div key={imgIdx} className="relative group">
+                  <div key={imgIdx} className="relative group w-full">
                     {img.WebUrl ? (
                       <Link
                         to={`/lobby/${accessToken}/${img.WebUrl.replace(
@@ -372,7 +372,7 @@ function LobbyPage() {
               <>
                 {/* Render Projection KPIs */}
                 <div className="mb-4 w-full">
-                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6 w-full">
                     {group.counters
                       .filter((kpi) => !!kpi.ProjectionDataSource)
                       .map((kpi, kpiIdx) => {
@@ -432,7 +432,7 @@ function LobbyPage() {
                   </div>
                 </div>
                 {/* Render Simple Counters (Non-KPI) */}
-                <div className="mb-4">
+                <div className="mb-4 w-full">
                   <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
                     {group.counters
                       .filter((kpi) => !kpi.ProjectionDataSource)
@@ -471,7 +471,7 @@ function LobbyPage() {
             )}
             {/* Render Links Lists */}
             {group.linksList.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 {group.linksList.map((linksList, listIdx) => {
                   console.log(linksList);
                   const title = linksList?.Title;
@@ -505,11 +505,11 @@ function LobbyPage() {
             )}
             {/* Render Bar Charts */}
             {group.barCharts.length > 0 && (
-              <div className="grid grid-cols-1 gap-6 mb-6">
+              <div className="grid grid-cols-1 gap-6 mb-6 w-full">
                 {group.barCharts.map((chart, chartIdx) => (
                   <div
                     key={chartIdx}
-                    className="bg-white rounded-lg shadow-md p-6"
+                    className="bg-white rounded-lg shadow-md p-6 w-full"
                   >
                     <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                       <BarChartOutlined className="mr-2" />

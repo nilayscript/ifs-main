@@ -413,8 +413,17 @@ function Callback({ setUser, setTokens }) {
   }, [navigate, setUser, setTokens]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      {loading ? <Spin size="large" /> : <h2>Redirecting...</h2>}
+    <div className="flex w-[100vw] items-center justify-center min-h-screen bg-white flex-col">
+      {loading ? (
+        <>
+          <Spin size="large" />
+          <p className="mt-4 text-lg font-medium text-gray-700">
+            Logging in...
+          </p>
+        </>
+      ) : (
+        <h2 className="text-lg">Redirecting...</h2>
+      )}
     </div>
   );
 }
