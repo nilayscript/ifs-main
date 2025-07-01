@@ -13,13 +13,16 @@ import {
 } from "@ant-design/icons";
 import ObjectCards from "./components/LinkObjectCards";
 import LinkObjectCards from "./components/LinkObjectCards";
+import { getNonKPIData } from "./utils/getNonKPIData";
 
 function LobbyPage() {
   const { accessToken, pageId } = useParams();
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [kpiData, setKpiData] = useState({});
+  const [nonKpiData, setNonKpiData] = useState({});
   const [kpiLoading, setKpiLoading] = useState({});
+  const [nonKpiLoading, setNonKpiLoading] = useState({});
   const [fetchError, setFetchError] = useState(null);
 
   const fetchLobbyPage = async () => {
@@ -106,6 +109,28 @@ function LobbyPage() {
     }
   };
 
+  const fetchNonKpiData = async (elementId) => {
+    if (!elementId || nonKpiData[elementId]) return;
+
+    setNonKpiLoading((prev) => ({ ...prev, [elementId]: true }));
+
+    try {
+      const result = await getNonKPIData(elementId, accessToken);
+      setNonKpiData((prev) => ({
+        ...prev,
+        [elementId]: result,
+      }));
+    } catch (err) {
+      console.error(`Error fetching non-KPI data for ${elementId}:`, err);
+      setNonKpiData((prev) => ({
+        ...prev,
+        [elementId]: null,
+      }));
+    } finally {
+      setNonKpiLoading((prev) => ({ ...prev, [elementId]: false }));
+    }
+  };
+
   const getAuthenticatedImageUrl = (imgPath) => {
     if (!imgPath) return "/placeholder-image.png";
     return `/.netlify/functions/get-image?path=${encodeURIComponent(
@@ -122,9 +147,8 @@ function LobbyPage() {
       const structure = getPageStructure(pageData);
       structure.forEach((group) => {
         group.counters.forEach((counter) => {
-          // Extract KPI ID from ProjectionDataSource Filter
+          // Fetch KPI data if it has ProjectionDataSource
           if (counter.ProjectionDataSource?.Filter) {
-            // Extract the ID from the filter string (e.g., "Id eq '132'")
             const filter = counter.ProjectionDataSource.Filter;
             const match =
               filter.match(/Id\s+eq\s+'(\d+)'/i) ||
@@ -135,6 +159,10 @@ function LobbyPage() {
               console.log(`Fetching KPI data for ID: ${kpiId}`);
               fetchKpiData(kpiId);
             }
+          } else if (counter.ID) {
+            // Fetch non-KPI data for regular counters
+            console.log(`Fetching non-KPI data for counter: ${counter.ID}`);
+            fetchNonKpiData(counter.ID);
           }
         });
       });
@@ -209,21 +237,20 @@ function LobbyPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex justify-center items-center bg-white">
-        <Spin
-          indicator={antIcon}
-          tip="Loading lobby page data..."
-          size="large"
-        />
+      <div className="min-h-screen flex flex-col gap-2 justify-center items-center bg-white w-[100vw]">
+        <Spin indicator={antIcon} size="large" />
+        <p className="text-[18px] font-[500] text-black">
+          Loading lobby page data...
+        </p>
       </div>
     );
   }
 
   if (!pageData) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-white w-[100vw]">
         <div className="p-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-red-700 max-w-2xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-red-700 w-full mx-auto">
             <p className="text-lg mb-3">No data available</p>
             {fetchError && (
               <p className="text-sm mb-3 font-semibold">Error: {fetchError}</p>
@@ -261,9 +288,9 @@ function LobbyPage() {
   const pageStructure = getPageStructure(pageData);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 w-[100w]">
       <ObjectCards />
-      <div className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-6 shadow-lg">
+      <div className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-6 shadow-lg w-full">
         <div className="px-4 md:px-8 lg:px-12">
           <div className="flex items-center text-sm mb-3 opacity-90">
             <Link
@@ -282,7 +309,7 @@ function LobbyPage() {
         </div>
       </div>
 
-      <div className="px-4 md:px-8 lg:px-12 py-6">
+      <div className="px-4 md:px-8 lg:px-12 py-6 w-full">
         {pageStructure.map((group, idx) => (
           <div key={idx} className="mb-8">
             {group.isSeparator && group.separatorTitle && (
@@ -311,7 +338,7 @@ function LobbyPage() {
                         className="block"
                       >
                         <img
-                          className="w-full h-64 md:h-96 lg:h-[500px] xl:h-[600px] rounded-lg shadow-lg object-cover group-hover:shadow-xl transition-shadow"
+                          className="w-full h-[25rem] rounded-lg shadow-lg object-cover group-hover:shadow-xl transition-shadow"
                           src={getAuthenticatedImageUrl(img.Image)}
                           alt={img.Name || `Image ${imgIdx + 1}`}
                           onError={(e) => {
@@ -328,7 +355,7 @@ function LobbyPage() {
                       </Link>
                     ) : (
                       <img
-                        className="w-full h-64 md:h-96 lg:h-[500px] xl:h-[600px] rounded-lg shadow-lg object-cover"
+                        className="w-full h-[25rem] rounded-lg shadow-lg object-cover"
                         src={getAuthenticatedImageUrl(img.Image)}
                         alt={img.Name || `Image ${imgIdx + 1}`}
                         onError={(e) => {
@@ -342,67 +369,105 @@ function LobbyPage() {
             )}
 
             {group.counters.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
-                {group.counters.map((kpi, kpiIdx) => {
-                  // Extract KPI ID from ProjectionDataSource Filter
-                  let kpiId = null;
-                  if (kpi.ProjectionDataSource?.Filter) {
-                    const filter = kpi.ProjectionDataSource.Filter;
-                    const match =
-                      filter.match(/Id\s+eq\s+'(\d+)'/i) ||
-                      filter.match(/Id\s*=\s*'(\d+)'/i);
-                    if (match && match[1]) {
-                      kpiId = match[1];
-                    }
-                  }
+              <>
+                {/* Render Projection KPIs */}
+                <div className="mb-4 w-full">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
+                    {group.counters
+                      .filter((kpi) => !!kpi.ProjectionDataSource)
+                      .map((kpi, kpiIdx) => {
+                        const filter = kpi.ProjectionDataSource.Filter;
+                        const match =
+                          filter.match(/Id\s+eq\s+'(\d+)'/i) ||
+                          filter.match(/Id\s*=\s*'(\d+)'/i);
+                        const kpiId = match ? match[1] : null;
+                        const apiData = kpiId ? kpiData[kpiId] : null;
+                        const isLoadingKpi = kpiId ? kpiLoading[kpiId] : false;
 
-                  const apiData = kpiId ? kpiData[kpiId] : null;
-                  const isLoadingKpi = kpiId ? kpiLoading[kpiId] : false;
+                        const measure = apiData?.Measure ?? null;
+                        const target =
+                          apiData?.Target ??
+                          (kpi.Footer?.match(/TARGET: ([\d.]+)/)?.[1]
+                            ? parseFloat(
+                                kpi.Footer.match(/TARGET: ([\d.]+)/)[1]
+                              )
+                            : null);
+                        const title = apiData?.Title || kpi.Title || kpi.Name;
+                        const suffix = kpi.Suffix || "";
 
-                  // Get values with fallbacks
-                  const measure = apiData?.Measure ?? null;
-                  const target =
-                    apiData?.Target ??
-                    (kpi.Footer?.match(/TARGET: ([\d.]+)/)?.[1]
-                      ? parseFloat(kpi.Footer.match(/TARGET: ([\d.]+)/)[1])
-                      : null);
-                  const title = apiData?.Title || kpi.Title || kpi.Name;
-                  const suffix = kpi.Suffix || "";
-
-                  return (
-                    <div
-                      key={kpiIdx}
-                      className="bg-white rounded-lg p-5 shadow-md hover:shadow-lg transition-shadow cursor-pointer relative"
-                      title={apiData?.Description || ""}
-                    >
-                      <div className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
-                        {title}
-                      </div>
-                      {isLoadingKpi ? (
-                        <div className="flex items-center justify-center h-12">
-                          <LoadingOutlined className="text-2xl text-purple-600" />
-                        </div>
-                      ) : (
-                        <>
+                        return (
                           <div
-                            className={`text-3xl font-bold mb-1 ${getKpiColor(
-                              measure,
-                              target
-                            )}`}
+                            key={kpi.ID || kpiIdx}
+                            className="bg-white rounded-lg p-5 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
                           >
-                            {measure !== null ? `${measure}${suffix}` : "-"}
+                            <div className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                              {title}
+                            </div>
+                            {isLoadingKpi ? (
+                              <div className="flex items-center justify-center h-12">
+                                <LoadingOutlined className="text-2xl text-purple-600" />
+                              </div>
+                            ) : (
+                              <>
+                                <div
+                                  className={`text-3xl font-bold mb-1 ${getKpiColor(
+                                    measure,
+                                    target
+                                  )}`}
+                                >
+                                  {measure !== null
+                                    ? `${measure}${suffix}`
+                                    : "-"}
+                                </div>
+                                <div className="text-xs text-gray-500 uppercase">
+                                  {target !== null
+                                    ? `TARGET: ${target}${suffix}`
+                                    : kpi.Footer || ""}
+                                </div>
+                              </>
+                            )}
                           </div>
-                          <div className="text-xs text-gray-500 uppercase">
-                            {target !== null
-                              ? `TARGET: ${target}${suffix}`
-                              : kpi.Footer || ""}
+                        );
+                      })}
+                  </div>
+                </div>
+                {/* Render Simple Counters (Non-KPI) */}
+                <div className="mb-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
+                    {group.counters
+                      .filter((kpi) => !kpi.ProjectionDataSource)
+                      .map((kpi, kpiIdx) => {
+                        const isLoading = nonKpiLoading[kpi.ID] || false;
+                        const value = nonKpiData[kpi.ID] || null;
+
+                        return (
+                          <div
+                            key={kpi.ID || kpiIdx}
+                            className="bg-white rounded-lg p-5 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+                          >
+                            <div className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                              {kpi.Title}
+                            </div>
+                            {isLoading ? (
+                              <div className="flex items-center justify-center h-12">
+                                <LoadingOutlined className="text-2xl text-purple-600" />
+                              </div>
+                            ) : (
+                              <>
+                                <div className="text-3xl font-bold mb-1 text-gray-900">
+                                  {value !== null ? value : "-"}
+                                </div>
+                                <div className="text-xs text-gray-500 uppercase">
+                                  {kpi.Footer || ""}
+                                </div>
+                              </>
+                            )}
                           </div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              </>
             )}
             {/* Render Links Lists */}
             {group.linksList.length > 0 && (

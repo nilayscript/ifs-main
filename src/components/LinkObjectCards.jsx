@@ -1,45 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-const ALL_PARAMETERS = [
-  "CONNECTION_TYPE",
-  "OBJECT_SITE",
-  "OBJECT_ID",
-  "OBJECT_TYPE",
-  "GROUP_ID",
-  "CATEGORY",
-  "TYPE",
-  "ITEM_CLASS",
-  "CRITICALITY",
-  "MAINT_ORG",
-  "WORK_TYPE_ID",
-  "WO_SITE",
-  "PRIORITY",
-  "CONTRACTOR",
-  "SUB_CON_NO",
-  "REPORTED_BY",
-  "PREPARED_BY",
-  "WORK_LEADER",
-  "COORDINATOR",
-  "PROJECT_ID",
-  "PM_GROUP_ID",
-  "CUSTOMER_NO",
-  "CONTRACT_ID",
-  "STATE",
-  "WO_TYPE",
-  "WO_NO",
-  "QUOTE_NO",
-  "COMPANY",
-  "SITE",
-  "STATUS",
-  "MANAGER",
-  "PROGRAM_ID",
-  "CATEGORY1_ID",
-  "CATEGORY2_ID",
-  "FINANCIALLY_RESPONSIBLE",
-  "CUSTOMER",
-];
-
 const generatePageParams = () => ({
   Parameter: [
     {
@@ -230,6 +191,82 @@ const generatePageParams = () => ({
       Description: "Quote No",
       ShowPageParameter: true,
     },
+    {
+      Name: "COMPANY",
+      Description: "Company",
+      DefaultValue: "11",
+      ShowPageParameter: true,
+    },
+    {
+      Name: "SITE",
+      Description: "Site",
+      DefaultValue: "101",
+      ShowPageParameter: true,
+    },
+    {
+      Name: "PERIOD",
+      Description: "Period",
+      DefaultValue: "MONTH",
+      ShowPageParameter: true,
+    },
+    {
+      Name: "DAYS",
+      Description: "Days",
+      DefaultValue: "365",
+      ShowPageParameter: true,
+    },
+    {
+      Name: "SO_TARGET",
+      Description: "Shop Order On-Time Target",
+      DefaultValue: "90",
+      ShowPageParameter: true,
+    },
+    {
+      Name: "OP_TARGET",
+      Description: "Operation On-Time Target",
+      DefaultValue: "95",
+      ShowPageParameter: true,
+    },
+    {
+      Name: "PART_NO",
+      Description: "Part No",
+      ShowPageParameter: true,
+    },
+    {
+      Name: "PERSON_BUYER",
+      Description: "Person Buyer",
+      ShowPageParameter: true,
+    },
+    {
+      Name: "PRODUCT_CODE",
+      Description: "Product Code",
+      ShowPageParameter: true,
+    },
+    {
+      Name: "PRODUCT_FAMILY",
+      Description: "Product Family",
+      ShowPageParameter: true,
+    },
+    {
+      Name: "WORK_CENTER",
+      Description: "Work Center",
+      ShowPageParameter: true,
+    },
+    {
+      Name: "DEPARTMENT",
+      Description: "Department",
+      ShowPageParameter: true,
+    },
+    {
+      Name: "PRODUCTION_LINE",
+      Description: "Production Line",
+      ShowPageParameter: true,
+    },
+    {
+      Name: "LABOUR_CLASS",
+      Description: "Labor Class",
+      ShowPageParameter: true,
+    },
   ],
 });
 
@@ -321,7 +358,13 @@ const LinkObjectCards = ({ links = [], parentElementId, accessToken }) => {
         // }
 
         const data = linkData[link.ID];
-        const count = data?.data?.rows?.[0]?.columns?.[0]?.Value || "0";
+        const hasMappedColumns =
+          link.ColumnMapping &&
+          link.ColumnMapping.MappedColumns &&
+          Object.keys(link.ColumnMapping.MappedColumns).length > 0;
+
+        const count =
+          hasMappedColumns && data?.data?.rows?.[0]?.columns?.[0]?.Value;
 
         return (
           <div
@@ -335,12 +378,12 @@ const LinkObjectCards = ({ links = [], parentElementId, accessToken }) => {
             <h3 className="text-lg font-semibold mb-2">{link.LinkTitle}</h3>
             {data?.error ? (
               <p className="text-red-500">Error loading data</p>
-            ) : (
+            ) : hasMappedColumns && count !== undefined ? (
               <div className="flex items-center justify-between">
                 <span className="text-2xl font-bold">{count}</span>
                 <span className="text-sm opacity-75">Count</span>
               </div>
-            )}
+            ) : null}
           </div>
         );
       })}

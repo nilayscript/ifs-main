@@ -209,7 +209,7 @@ function Layout({
 
   return (
     <div className="min-h-screen w-[100vw] bg-gray-50 p-4">
-      <div className="max-w-5xl mx-auto">
+      <div className="w-full mx-auto">
         {user ? (
           <>
             <div className="flex justify-between items-center mb-6 w-">
@@ -242,8 +242,11 @@ function Layout({
                 Lobbies
               </h2>
               {loadingLobbies ? (
-                <div className="flex justify-center items-center py-20">
-                  <Spin indicator={antIcon} tip="Loading lobbies..." />
+                <div className="flex flex-col justify-center items-center py-20 w-[100vw] h-[100vh] bg-white">
+                  <Spin indicator={antIcon} />
+                  <p className="text-[18px] font-[500] text-black">
+                    Loading lobbies...
+                  </p>
                 </div>
               ) : lobbies.length === 0 ? (
                 <div className="text-gray-500">No lobbies found.</div>
