@@ -318,7 +318,6 @@ function LobbyPage() {
                 {group.separatorTitle}
               </div>
             )}
-
             {group.images.length > 0 && (
               <div
                 className={`grid ${
@@ -367,7 +366,6 @@ function LobbyPage() {
                 ))}
               </div>
             )}
-
             {group.counters.length > 0 && (
               <>
                 {/* Render Projection KPIs */}
@@ -417,7 +415,7 @@ function LobbyPage() {
                                 >
                                   {measure !== null
                                     ? `${measure}${suffix}`
-                                    : "-"}
+                                    : "-"}{" "}
                                 </div>
                                 <div className="text-xs text-gray-500 uppercase">
                                   {target !== null
@@ -439,6 +437,7 @@ function LobbyPage() {
                       .map((kpi, kpiIdx) => {
                         const isLoading = nonKpiLoading[kpi.ID] || false;
                         const value = nonKpiData[kpi.ID] || null;
+                        console.log("KPI", kpi);
 
                         return (
                           <div
@@ -455,7 +454,19 @@ function LobbyPage() {
                             ) : (
                               <>
                                 <div className="text-3xl font-bold mb-1 text-gray-900">
-                                  {value !== null ? value : "-"}
+                                  {value !== null
+                                    ? `${
+                                        kpi.RoundValue
+                                          ? Math.round(value)
+                                          : value
+                                      }${
+                                        kpi.Suffix ||
+                                        (Number(value) <= 100 &&
+                                        Number(value) >= 0
+                                          ? "%"
+                                          : "")
+                                      }`
+                                    : "-"}
                                 </div>
                                 <div className="text-xs text-gray-500 uppercase">
                                   {kpi.Footer || ""}
@@ -522,7 +533,6 @@ function LobbyPage() {
                 ))}
               </div>
             )}
-
             {/* Render Lists */}
             {group.lists.length > 0 && (
               <div className="grid grid-cols-1 gap-6 mb-6">
@@ -546,7 +556,6 @@ function LobbyPage() {
                 ))}
               </div>
             )}
-
             {/* Render text elements (navigation tiles) */}
             {group.texts.length > 0 && (
               <div
