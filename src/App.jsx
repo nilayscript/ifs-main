@@ -363,8 +363,8 @@ function Callback({ setUser, setTokens }) {
         );
 
         const tokenText = await tokenResponse.text();
-        console.log("Token response status:", tokenResponse.status);
-        console.log("Token response:", tokenText);
+        // console.log("Token response status:", tokenResponse.status);
+        // console.log("Token response:", tokenText);
 
         if (!tokenResponse.ok) {
           throw new Error(`Token exchange failed: ${tokenText}`);

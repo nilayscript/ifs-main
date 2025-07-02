@@ -24,7 +24,7 @@ exports.handler = async (event) => {
     );
 
     const data = await res.json();
-    console.log("Element ID", elementId, "DATA", data);
+    // console.log("Element ID", elementId, "DATA", data);
 
     return {
       statusCode: 200,

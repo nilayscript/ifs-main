@@ -14,6 +14,12 @@ import {
 import ObjectCards from "./components/LinkObjectCards";
 import LinkObjectCards from "./components/LinkObjectCards";
 import { getNonKPIData } from "./utils/getNonKPIData";
+import { CopyOutlined } from "@ant-design/icons";
+import BarChartComponent from "./components/BarChartComponent";
+import LineChartComponent from "./components/LineChartComponent";
+import PieChartComponent from "./components/PieChartComponent";
+import GaugeComponent from "./components/GaugeComponent";
+import TableComponent from "./components/TableComponent";
 
 function LobbyPage() {
   const { accessToken, pageId } = useParams();
@@ -40,7 +46,7 @@ function LobbyPage() {
     setLoading(true);
     setFetchError(null);
     try {
-      console.log("Fetching lobby page:", pageId);
+      // console.log("Fetching lobby page:", pageId);
       const res = await fetch(`/.netlify/functions/get-lobby-page/${pageId}`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -48,12 +54,14 @@ function LobbyPage() {
         },
       });
 
-      console.log("Response status:", res.status);
+      // console.log("Response status:", res.status);
       const result = await res.json();
-      console.log("Response data:", result);
+      // console.log("Response data:", result);
 
       if (res.ok && result?.data?.page) {
-        setPageData(result.data);
+        const page = result.data.page;
+        const pageParams = page.Parameters?.Parameter || [];
+        setPageData({ ...result.data, pageParams });
         message.success("Lobby page data fetched");
       } else if (res.ok && result?.data) {
         setPageData(result.data);
@@ -89,7 +97,7 @@ function LobbyPage() {
 
       if (res.ok) {
         const result = await res.json();
-        console.log("KPI Data Response:", result);
+        // console.log("KPI Data Response:", result);
 
         if (result.data) {
           setKpiData((prev) => ({
@@ -109,13 +117,13 @@ function LobbyPage() {
     }
   };
 
-  const fetchNonKpiData = async (elementId) => {
+  const fetchNonKpiData = async (elementId, pageParams) => {
     if (!elementId || nonKpiData[elementId]) return;
 
     setNonKpiLoading((prev) => ({ ...prev, [elementId]: true }));
 
     try {
-      const result = await getNonKPIData(elementId, accessToken);
+      const result = await getNonKPIData(elementId, accessToken, pageParams);
       setNonKpiData((prev) => ({
         ...prev,
         [elementId]: result,
@@ -156,13 +164,13 @@ function LobbyPage() {
 
             if (match && match[1]) {
               const kpiId = match[1];
-              console.log(`Fetching KPI data for ID: ${kpiId}`);
+              // console.log(`Fetching KPI data for ID: ${kpiId}`);
               fetchKpiData(kpiId);
             }
           } else if (counter.ID) {
             // Fetch non-KPI data for regular counters
-            console.log(`Fetching non-KPI data for counter: ${counter.ID}`);
-            fetchNonKpiData(counter.ID);
+            // console.log(`Fetching non-KPI data for counter: ${counter.ID}`);
+            fetchNonKpiData(counter.ID, pageData.pageParams);
           }
         });
       });
@@ -210,6 +218,21 @@ function LobbyPage() {
         ? Array.isArray(group.Elements.BarChart)
           ? group.Elements.BarChart
           : [group.Elements.BarChart]
+        : [],
+      lineCharts: group.Elements?.LineChart
+        ? Array.isArray(group.Elements.LineChart)
+          ? group.Elements.LineChart
+          : [group.Elements.LineChart]
+        : [],
+      pieCharts: group.Elements?.PieChart
+        ? Array.isArray(group.Elements.PieChart)
+          ? group.Elements.PieChart
+          : [group.Elements.PieChart]
+        : [],
+      gaugeCharts: group.Elements?.AnalogGauge
+        ? Array.isArray(group.Elements.AnalogGauge)
+          ? group.Elements.AnalogGauge
+          : [group.Elements.AnalogGauge]
         : [],
       lists: group.Elements?.List
         ? Array.isArray(group.Elements.List)
@@ -437,7 +460,6 @@ function LobbyPage() {
                       .map((kpi, kpiIdx) => {
                         const isLoading = nonKpiLoading[kpi.ID] || false;
                         const value = nonKpiData[kpi.ID] || null;
-                        console.log("KPI", kpi);
 
                         return (
                           <div
@@ -484,7 +506,6 @@ function LobbyPage() {
             {group.linksList.length > 0 && (
               <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 {group.linksList.map((linksList, listIdx) => {
-                  console.log(linksList);
                   const title = linksList?.Title;
                   const parentElementId = linksList?.ID;
                   return (
@@ -505,7 +526,7 @@ function LobbyPage() {
                                 : [linksList.Links.Link]
                             }
                             parentElementId={parentElementId}
-                            accessToken={accessToken}
+                            pageParams={pageData.pageParams}
                           />
                         </div>
                       )}
@@ -516,23 +537,113 @@ function LobbyPage() {
             )}
             {/* Render Bar Charts */}
             {group.barCharts.length > 0 && (
-              <div className="grid grid-cols-1 gap-6 mb-6 w-full">
-                {group.barCharts.map((chart, chartIdx) => (
-                  <div
-                    key={chartIdx}
-                    className="bg-white rounded-lg shadow-md p-6 w-full"
-                  >
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                      <BarChartOutlined className="mr-2" />
-                      {chart.Title || "Chart"}
-                    </h3>
-                    <div className="text-gray-500 text-center py-8">
-                      Chart visualization would appear here
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 w-full">
+                {group.barCharts.map((chart, chartIdx) => {
+                  return (
+                    <div
+                      key={`bar-${chartIdx}`}
+                      className="bg-white rounded-lg shadow-md p-6 w-full"
+                    >
+                      <div className="flex items-center mb-4">
+                        <BarChartOutlined className="mr-2 text-purple-600" />
+                        <h3 className="text-lg font-semibold text-gray-800">
+                          {chart.Title || "Bar Chart"}
+                        </h3>
+                      </div>
+                      <div className="text-gray-500 text-center py-8">
+                        <BarChartComponent
+                          chart={chart}
+                          pageParams={pageData.pageParams}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
+            {/* Render Line Charts */}
+            {group.lineCharts.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 w-full">
+                {group.lineCharts.map((chart, chartIdx) => {
+                  const elementId = chart.ID;
+                  return (
+                    <div
+                      key={`line-${chartIdx}`}
+                      className="bg-white rounded-lg shadow-md p-6 w-full"
+                    >
+                      <div className="flex items-center mb-4">
+                        <LineChartOutlined className="mr-2 text-blue-600" />
+                        <h3 className="text-lg font-semibold text-gray-800">
+                          {chart.Title || "Line Chart"}
+                        </h3>
+                      </div>
+                      <div className="text-gray-500 text-center py-8">
+                        <LineChartComponent
+                          elementId={elementId}
+                          pageParams={pageData.pageParams}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {/* Render Pie Charts */}
+            {group.pieCharts.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 w-full">
+                {group.pieCharts.map((chart, chartIdx) => {
+                  const elementId = chart.ID;
+
+                  return (
+                    <div
+                      key={`pie-${chartIdx}`}
+                      className="bg-white rounded-lg shadow-md p-6 flex flex-col w-full h-full"
+                    >
+                      <div className="flex items-center mb-4">
+                        <BarChartOutlined className="mr-2 text-pink-600" />
+                        <h3 className="text-lg font-semibold text-gray-800">
+                          {chart.Title || "Pie Chart"}
+                        </h3>
+                      </div>
+                      <div className="flex-grow w-full h-[300px]">
+                        <PieChartComponent
+                          elementId={elementId}
+                          pageParams={pageData.pageParams}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {group.gaugeCharts.length > 0 && (
+              <div className="flex items-center my-2 p-2 gap-4 w-full">
+                {group.gaugeCharts.map((chart, chartIdx) => {
+                  const elementId = chart.ID;
+
+                  return (
+                    <div
+                      key={`pie-${chartIdx}`}
+                      className="bg-white rounded-lg shadow-md p-6 flex flex-col w-full h-full"
+                    >
+                      <div className="flex items-center mb-4">
+                        <BarChartOutlined className="mr-2 text-pink-600" />
+                        <h3 className="text-lg font-semibold text-gray-800">
+                          {chart.Title || "Pie Chart"}
+                        </h3>
+                      </div>
+                      <div className="flex-grow w-full h-[300px]">
+                        <GaugeComponent
+                          elementId={elementId}
+                          pageParams={pageData.pageParams}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Render Lists */}
             {group.lists.length > 0 && (
               <div className="grid grid-cols-1 gap-6 mb-6">
@@ -548,9 +659,10 @@ function LobbyPage() {
                       </h3>
                     </div>
                     <div className="p-4">
-                      <div className="text-gray-500 text-center py-4">
-                        Data table would appear here
-                      </div>
+                      <TableComponent
+                        list={list}
+                        pageParams={pageData.pageParams}
+                      />
                     </div>
                   </div>
                 ))}
@@ -610,8 +722,18 @@ function LobbyPage() {
 
         {/* Show raw data toggle (optional) */}
         <details className="mt-12 mb-6">
-          <summary className="cursor-pointer text-gray-600 hover:text-gray-800 font-medium">
-            View Raw JSON Data
+          <summary className="cursor-pointer text-gray-600 hover:text-gray-800 font-medium flex items-center justify-between">
+            <span>View Raw JSON Data</span>
+            <CopyOutlined
+              className="ml-2 text-gray-500 hover:text-black cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent toggling the <details>
+                navigator.clipboard.writeText(
+                  JSON.stringify(pageData, null, 2)
+                );
+                message.success("Copied JSON to clipboard");
+              }}
+            />
           </summary>
           <div className="mt-4 bg-white p-6 rounded-lg shadow-lg">
             <pre className="overflow-auto max-h-96 text-xs text-gray-800">
