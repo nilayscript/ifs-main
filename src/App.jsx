@@ -208,7 +208,10 @@ function App() {
           path="/callback"
           element={<Callback setUser={setUser} setTokens={setTokens} />}
         />
-        <Route path={`/lobby/:accessToken/:pageId`} element={<LobbyPage />} />
+        <Route
+          path={`/lobby/:accessToken/:pageId`}
+          element={<LobbyPage user={user} />}
+        />
       </Routes>
     </Router>
   );
