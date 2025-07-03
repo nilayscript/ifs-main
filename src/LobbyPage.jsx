@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { message, Spin } from "antd";
 import {
   LoadingOutlined,
@@ -21,8 +21,8 @@ import PieChartComponent from "./components/PieChartComponent";
 import GaugeComponent from "./components/GaugeComponent";
 import TableComponent from "./components/TableComponent";
 
-function LobbyPage() {
-  const { accessToken, pageId } = useParams();
+function LobbyPage({ user }) {
+  const { accessToken: initialToken, pageId } = useParams();
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [kpiData, setKpiData] = useState({});
@@ -30,6 +30,9 @@ function LobbyPage() {
   const [kpiLoading, setKpiLoading] = useState({});
   const [nonKpiLoading, setNonKpiLoading] = useState({});
   const [fetchError, setFetchError] = useState(null);
+  const navigate = useNavigate();
+
+  const accessToken = user?.access_token || initialToken;
 
   const fetchLobbyPage = async () => {
     if (!accessToken || !pageId) {
@@ -149,6 +152,12 @@ function LobbyPage() {
   useEffect(() => {
     fetchLobbyPage();
   }, [accessToken, pageId]);
+
+  useEffect(() => {
+    if (user?.access_token && user.access_token !== initialToken) {
+      navigate(`/lobby/${user.access_token}/${pageId}`, { replace: true });
+    }
+  }, [user?.access_token, initialToken, pageId, navigate]);
 
   useEffect(() => {
     if (pageData) {

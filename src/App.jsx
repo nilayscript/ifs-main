@@ -107,6 +107,16 @@ function App() {
           access_token: result.access_token,
           refresh_token: result.refresh_token || tokens.refresh_token,
         });
+        // Update the user object
+        const updatedUser = {
+          ...user,
+          access_token: result.access_token,
+          refresh_token: result.refresh_token || user.refresh_token,
+          expires_at:
+            Math.floor(Date.now() / 1000) + (result.expires_in || 3600),
+        };
+        setUser(updatedUser);
+        await userManager.storeUser(updatedUser);
         // message.success("Token refreshed!");
       } else {
         // message.error(result.message || "Token refresh failed.");
@@ -162,6 +172,16 @@ function App() {
   useEffect(() => {
     if (tokens?.access_token) fetchLobbies();
   }, [tokens]);
+
+  useEffect(() => {
+    if (!tokens?.refresh_token) return;
+
+    const interval = setInterval(() => {
+      refreshTokens();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [tokens?.refresh_token]);
 
   const antIcon = <LoadingOutlined style={{ fontSize: 24 }} spin />;
 
