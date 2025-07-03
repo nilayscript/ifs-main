@@ -174,14 +174,19 @@ function App() {
   }, [tokens]);
 
   useEffect(() => {
-    if (!tokens?.refresh_token) return;
+    if (!tokens?.refresh_token || !user?.expires_at) return;
 
-    const interval = setInterval(() => {
+    const now = Math.floor(Date.now() / 1000);
+    const timeUntilExpiry = user.expires_at - now;
+
+    console.log("REFRESHING TOKEN BEFORE EXPIRY", timeUntilExpiry);
+
+    const timer = setTimeout(() => {
       refreshTokens();
-    }, 15000);
+    }, Math.max(timeUntilExpiry - 60, 5) * 1000);
 
-    return () => clearInterval(interval);
-  }, [tokens?.refresh_token]);
+    return () => clearTimeout(timer);
+  }, [tokens?.refresh_token, user?.expires_at]);
 
   const antIcon = <LoadingOutlined style={{ fontSize: 24 }} spin />;
 
