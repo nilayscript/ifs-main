@@ -37,7 +37,7 @@ function LobbyPage() {
         accessToken: !!accessToken,
         pageId,
       });
-      message.error("Missing required parameters");
+      // message.error("Missing required parameters");
       setFetchError("Missing required parameters");
       setLoading(false);
       return;
@@ -58,25 +58,25 @@ function LobbyPage() {
       const result = await res.json();
       // console.log("Response data:", result);
 
-      if (res.ok && result?.data?.page) {
-        const page = result.data.page;
-        const pageParams = page.Parameters?.Parameter || [];
-        setPageData({ ...result.data, pageParams });
-        message.success("Lobby page data fetched");
-      } else if (res.ok && result?.data) {
-        setPageData(result.data);
-        message.success("Lobby page data fetched");
+      if (res.ok && result?.page) {
+        if (res.ok && result?.page) {
+          const page = result.page;
+          const pageParams = page.Parameters?.Parameter || [];
+          setPageData({ ...page, pageParams });
+        }
+
+        // message.success("Lobby page data fetched");
       } else {
         console.error("Failed to fetch lobby page:", result);
         setFetchError(result.message || "Failed to fetch lobby page data.");
-        message.error(result.message || "Failed to fetch lobby page data.");
+        // message.error(result.message || "Failed to fetch lobby page data.");
       }
     } catch (err) {
       console.error("Lobby page fetch error:", err);
       setFetchError(
         err.message || "Network error while fetching lobby page data."
       );
-      message.error("Network error while fetching lobby page data.");
+      // message.error("Network error while fetching lobby page data.");
     } finally {
       setLoading(false);
     }
@@ -579,7 +579,7 @@ function LobbyPage() {
                       </div>
                       <div className="text-gray-500 text-center py-8">
                         <LineChartComponent
-                          elementId={elementId}
+                          chart={chart}
                           pageParams={pageData.pageParams}
                         />
                       </div>
@@ -652,12 +652,6 @@ function LobbyPage() {
                     key={listIdx}
                     className="bg-white rounded-lg shadow-md overflow-hidden"
                   >
-                    <div className="px-6 py-4 bg-gray-50 border-b">
-                      <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                        <UnorderedListOutlined className="mr-2" />
-                        {list.Title || "List"}
-                      </h3>
-                    </div>
                     <div className="p-4">
                       <TableComponent
                         list={list}
@@ -731,7 +725,7 @@ function LobbyPage() {
                 navigator.clipboard.writeText(
                   JSON.stringify(pageData, null, 2)
                 );
-                message.success("Copied JSON to clipboard");
+                // message.success("Copied JSON to clipboard");
               }}
             />
           </summary>

@@ -107,13 +107,13 @@ function App() {
           access_token: result.access_token,
           refresh_token: result.refresh_token || tokens.refresh_token,
         });
-        message.success("Token refreshed!");
+        // message.success("Token refreshed!");
       } else {
-        message.error(result.message || "Token refresh failed.");
+        // message.error(result.message || "Token refresh failed.");
       }
     } catch (err) {
       console.error("Token refresh error:", err);
-      message.error("Error refreshing token.");
+      // message.error("Error refreshing token.");
     } finally {
       setRefreshing(false);
     }
@@ -133,15 +133,15 @@ function App() {
 
       const result = await res.json();
 
-      if (res.ok && result?.data?.pages) {
-        setLobbies(result.data.pages);
-        message.success("Lobbies fetched");
+      if (res.ok && result?.pages) {
+        setLobbies(result.pages);
+        // message.success("Lobbies fetched");
       } else {
-        message.error(result.message || "Failed to fetch lobbies.");
+        // message.error(result.message || "Failed to fetch lobbies.");
       }
     } catch (err) {
       console.error("Lobby fetch error:", err);
-      message.error("Network error while fetching lobbies.");
+      // message.error("Network error while fetching lobbies.");
     } finally {
       setLoadingLobbies(false);
     }
@@ -309,7 +309,7 @@ function Callback({ setUser, setTokens }) {
               access_token: user.access_token,
               refresh_token: user.refresh_token,
             });
-            message.success("Login successful!");
+            // message.success("Login successful!");
             navigate("/");
             return;
           }
@@ -398,11 +398,11 @@ function Callback({ setUser, setTokens }) {
         // Store in session for the OIDC library
         await userManager.storeUser(user);
 
-        message.success("Login successful!");
+        // message.success("Login successful!");
         navigate("/");
       } catch (error) {
         console.error("Login failed:", error);
-        message.error(`Login failed: ${error.message}`);
+        // message.error(`Login failed: ${error.message}`);
         navigate("/");
       } finally {
         setLoading(false);

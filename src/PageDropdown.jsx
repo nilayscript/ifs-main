@@ -32,10 +32,10 @@ const PageDropdown = ({ accessToken }) => {
       if (response.data.pages) {
         setPages(response.data.pages);
       } else {
-        message.error("No pages found.");
+        // message.error("No pages found.");
       }
     } catch (error) {
-      message.error("Failed to fetch pages.");
+      // message.error("Failed to fetch pages.");
       console.error("Error fetching pages:", error);
     } finally {
       setLoading(false);
@@ -43,7 +43,7 @@ const PageDropdown = ({ accessToken }) => {
   };
 
   const handleSelect = (value) => {
-    message.success(`Selected Page ID: ${value}`);
+    // message.success(`Selected Page ID: ${value}`);
   };
 
   return (

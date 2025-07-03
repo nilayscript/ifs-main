@@ -11,89 +11,187 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const transformDataForChart = (apiData) => {
-  if (!apiData) return { series: [], xAxisKey: null, valueFields: [] };
+const optimizeDataPoints = (series) => {
+  return series.map((s) => {
+    // Find all non-zero points
+    const nonZeroPoints = s.data.filter((p) => p.y !== 0 && p.y !== null);
 
-  let rows = [];
-  if (apiData.data && apiData.data.rows) {
-    rows = apiData.data.rows;
-  } else if (Array.isArray(apiData)) {
-    rows = apiData;
+    // If few non-zero points, show them plus adjacent points
+    if (nonZeroPoints.length <= 3 && s.data.length > 10) {
+      const importantPoints = [];
+      nonZeroPoints.forEach((p) => {
+        const idx = s.data.findIndex((d) => d.x === p.x);
+        // Include the point before and after each non-zero point
+        if (idx > 0) importantPoints.push(s.data[idx - 1]);
+        importantPoints.push(p);
+        if (idx < s.data.length - 1) importantPoints.push(s.data[idx + 1]);
+      });
+      // Add first and last points for context
+      importantPoints.push(s.data[0]);
+      importantPoints.push(s.data[s.data.length - 1]);
+      // Remove duplicates and sort
+      const uniquePoints = [
+        ...new Map(importantPoints.map((p) => [p.x, p])).values(),
+      ];
+      return {
+        ...s,
+        data: uniquePoints.sort((a, b) => a.x.localeCompare(b.x)),
+      };
+    }
+    return s;
+  });
+};
+
+const transformDataForChart = (apiData, chartConfig) => {
+  console.log("Transforming data with chart config:", chartConfig);
+  if (
+    !apiData ||
+    !apiData.data ||
+    !apiData.data.rows ||
+    !apiData.data.rows.length
+  ) {
+    return { series: [], xAxisKey: null, yAxisKey: null, seriesKey: null };
   }
 
-  if (!rows.length) return { series: [], xAxisKey: null, valueFields: [] };
+  // Get field names from chart config
+  const xAxisField = chartConfig?.XYDataSeries?.XColumn?.Name;
+  const yAxisField = chartConfig?.XYDataSeries?.YColumn?.Name;
+  const seriesField = chartConfig?.XYDataSeries?.FColumn?.Name;
 
-  const dataPoints = rows.map((row) => {
+  if (!xAxisField || !yAxisField) {
+    console.error("Missing required fields in chart config");
+    return { series: [], xAxisKey: null, yAxisKey: null, seriesKey: null };
+  }
+
+  // Get display names from API response (first row)
+  const firstRow = apiData.data.rows[0].columns;
+  const xAxisDisplayName = firstRow.find((col) =>
+    col.Column.includes(xAxisField)
+  )?.Name;
+  const yAxisDisplayName = firstRow.find((col) =>
+    col.Column.includes(yAxisField)
+  )?.Name;
+  const seriesDisplayName = seriesField
+    ? firstRow.find((col) => col.Column.includes(seriesField))?.Name
+    : null;
+
+  console.log(
+    "Using fields - xAxis:",
+    xAxisField,
+    "yAxis:",
+    yAxisField,
+    "series:",
+    seriesField
+  );
+  console.log(
+    "Display names - xAxis:",
+    xAxisDisplayName,
+    "yAxis:",
+    yAxisDisplayName,
+    "series:",
+    seriesDisplayName
+  );
+
+  // Transform API response data into usable format
+  const dataPoints = apiData.data.rows.map((row) => {
     const point = {};
     row.columns.forEach((col) => {
-      point[col.Name] =
-        col.TypeName === "NUMBER" ? parseFloat(col.Value) : col.Value;
+      // Match columns based on the field names from config
+      if (col.Column.includes(xAxisField)) {
+        point.xValue =
+          col.TypeName === "NUMBER" ? parseFloat(col.Value) : col.Value;
+        point.xName = col.Name;
+      }
+      if (col.Column.includes(yAxisField)) {
+        point.yValue =
+          col.TypeName === "NUMBER" ? parseFloat(col.Value) : col.Value;
+        point.yName = col.Name;
+      }
+      if (seriesField && col.Column.includes(seriesField)) {
+        point.seriesValue = col.Value;
+        point.seriesName = col.Name;
+      }
     });
     return point;
   });
 
-  const potentialSeriesFields = Object.keys(dataPoints[0] || {}).filter(
-    (key) =>
-      !dataPoints.some((point) => typeof point[key] === "number") &&
-      new Set(dataPoints.map((p) => p[key])).size > 1
-  );
+  console.log("Transformed data points:", dataPoints);
 
-  const potentialValueFields = Object.keys(dataPoints[0] || {}).filter((key) =>
-    dataPoints.some((point) => typeof point[key] === "number")
-  );
+  // Group data by series (if series field exists)
+  const seriesMap = {};
+  const allXValues = new Set();
 
-  const potentialXAxisFields = Object.keys(dataPoints[0] || {}).filter(
-    (key) =>
-      !dataPoints.some((point) => typeof point[key] === "number") &&
-      key !== potentialSeriesFields[0]
-  );
+  dataPoints.forEach((point) => {
+    const seriesKey = seriesField ? point.seriesValue : "default";
+    const xValue = point.xValue;
+    const yValue = point.yValue;
 
-  const seriesField = potentialSeriesFields[0] || null;
-  const xAxisField =
-    potentialXAxisFields[0] || Object.keys(dataPoints[0] || {})[0];
-  const valueFields = potentialValueFields.length ? potentialValueFields : [];
+    if (xValue === undefined || yValue === undefined) return;
 
-  if (!valueFields.length) {
-    return { series: [], xAxisKey: null, valueFields: [] };
-  }
+    allXValues.add(xValue);
 
-  let series = [];
-  if (seriesField) {
-    const seriesNames = [...new Set(dataPoints.map((p) => p[seriesField]))];
-    series = seriesNames.map((seriesName) => {
-      const seriesData = dataPoints
-        .filter((p) => p[seriesField] === seriesName)
-        .map((point) => {
-          const dataPoint = { ...point };
-          delete dataPoint[seriesField];
-          return dataPoint;
-        });
-      return {
-        name: seriesName,
-        data: seriesData,
+    if (!seriesMap[seriesKey]) {
+      seriesMap[seriesKey] = {
+        name: seriesField ? point.seriesValue : yAxisDisplayName || "Value",
+        data: {},
       };
-    });
-  } else {
-    series = [
-      {
-        name: "Data",
-        data: dataPoints,
-      },
-    ];
-  }
+    }
+    seriesMap[seriesKey].data[xValue] = yValue;
+  });
+
+  // Convert to array of xValues sorted appropriately
+  const sortedXValues = Array.from(allXValues).sort((a, b) => {
+    // Try to sort as dates if they look like dates
+    if (
+      typeof a === "string" &&
+      typeof b === "string" &&
+      a.match(/\d{4}-\d{2}/) &&
+      b.match(/\d{4}-\d{2}/)
+    ) {
+      return new Date(a) - new Date(b);
+    }
+    // Otherwise sort as strings
+    return String(a).localeCompare(String(b));
+  });
+
+  // Prepare series data in format expected by Recharts
+  const series = Object.values(seriesMap).map((series) => ({
+    name: series.name,
+    data: sortedXValues.map((xValue) => ({
+      x: xValue,
+      y: series.data[xValue] !== undefined ? series.data[xValue] : null,
+    })),
+  }));
+
+  console.log("Initial series data:", series);
+
+  const finalSeries = optimizeDataPoints(series);
+
+  console.log("Final series data:", finalSeries);
 
   return {
-    series,
-    xAxisKey: xAxisField,
-    valueFields,
+    series: finalSeries,
+    xAxisKey: "x",
+    yAxisKey: "y",
+    allXValues: sortedXValues,
+    originalConfig: {
+      xAxisField,
+      yAxisField,
+      seriesField,
+      xAxisDisplayName,
+      yAxisDisplayName,
+      seriesDisplayName,
+    },
   };
 };
-
-const LineChartComponent = ({ elementId, pageParams }) => {
+const LineChartComponent = ({ chart, pageParams }) => {
   const { accessToken, pageId } = useParams();
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const elementId = chart.ID;
+
+  console.log("LINE CHART CONFIG", chart);
 
   useEffect(() => {
     if (!accessToken || !elementId) {
@@ -122,12 +220,13 @@ const LineChartComponent = ({ elementId, pageParams }) => {
         });
 
         const result = await response.json();
+        console.log("LINE CHART RESPONSE", result);
 
         if (!response.ok) {
           throw new Error(result.message || "Failed to fetch data");
         }
 
-        const transformedData = transformDataForChart(result);
+        const transformedData = transformDataForChart(result, chart);
         setChartData(transformedData);
         setError(null);
       } catch (error) {
@@ -139,21 +238,27 @@ const LineChartComponent = ({ elementId, pageParams }) => {
     };
 
     fetchGraphData();
-  }, [accessToken, elementId]);
+  }, [accessToken, elementId, pageParams]);
 
   if (loading) return <div>Loading chart data...</div>;
   if (error) return <div>Error: {error}</div>;
-  if (!chartData || !chartData.series.length || !chartData.valueFields.length)
-    return <div>No numeric data available for chart</div>;
+  if (!chartData || !chartData.series.length)
+    return <div>No data available for chart</div>;
 
-  const colors = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088FE"];
+  const colors = [
+    "#8884d8",
+    "#82ca9d",
+    "#ffc658",
+    "#ff8042",
+    "#0088FE",
+    "#00C49F",
+  ];
 
+  // Calculate max Y value for domain with null checks
   const maxValue = Math.max(
-    ...chartData.series.flatMap((series) =>
-      series.data.flatMap((point) =>
-        chartData.valueFields.map((field) => point[field] || 0)
-      )
-    )
+    ...chartData.series
+      .flatMap((series) => series.data.map((point) => point.y || 0))
+      .filter(Number.isFinite)
   );
 
   const calculateYAxisInterval = (max) => {
@@ -169,31 +274,34 @@ const LineChartComponent = ({ elementId, pageParams }) => {
     Math.ceil((maxValue * 1.2) / yAxisInterval) * yAxisInterval,
   ];
 
-  const allXAxisValues = [
-    ...new Set(
-      chartData.series.flatMap((series) =>
-        series.data.map((point) => point[chartData.xAxisKey])
-      )
-    ),
-  ].sort();
+  // Prepare data for Recharts with null checks
+  const combinedData = chartData.allXValues
+    .map((xValue) => {
+      const dataPoint = { x: xValue };
+      chartData.series.forEach((series) => {
+        const point = series.data.find((p) => p.x === xValue);
+        dataPoint[series.name] = point ? point.y : null;
+      });
+      return dataPoint;
+    })
+    .filter((point) => point.x !== undefined && point.x !== null);
+
+  console.log("Combined chart data:", combinedData);
 
   return (
     <div style={{ width: "100%", height: 400 }}>
       <ResponsiveContainer>
         <LineChart
-          margin={{ top: 20, right: 30, left: 20 }}
-          data={allXAxisValues.map((value) => ({
-            [chartData.xAxisKey]: value,
-          }))}
+          data={combinedData}
+          margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
-            dataKey={chartData.xAxisKey}
-            angle={-55}
+            dataKey="x"
+            angle={-45}
             textAnchor="end"
-            height={100}
-            ticks={allXAxisValues}
-            padding={{ left: 200, right: 30 }}
+            height={80}
+            interval={0}
           />
           <YAxis
             domain={yAxisDomain}
@@ -203,32 +311,16 @@ const LineChartComponent = ({ elementId, pageParams }) => {
           <Tooltip />
           <Legend />
 
-          {chartData.series.map((series, index) => {
-            const dataMap = new Map(
-              series.data.map((point) => [point[chartData.xAxisKey], point])
-            );
-
-            return chartData.valueFields.map((field, fieldIndex) => (
-              <Line
-                key={`${series.name}-${field}`}
-                name={
-                  chartData.series.length > 1
-                    ? `${series.name} - ${field}`
-                    : field
-                }
-                data={allXAxisValues.map((xValue) => {
-                  const point = dataMap.get(xValue);
-                  return point
-                    ? { ...point }
-                    : { [chartData.xAxisKey]: xValue, [field]: null };
-                })}
-                dataKey={field}
-                stroke={colors[(index + fieldIndex) % colors.length]}
-                activeDot={{ r: 8 }}
-                connectNulls={false}
-              />
-            ));
-          })}
+          {chartData.series.map((series, index) => (
+            <Line
+              key={series.name}
+              name={series.name}
+              dataKey={series.name}
+              stroke={colors[index % colors.length]}
+              activeDot={{ r: 8 }}
+              connectNulls={false}
+            />
+          ))}
         </LineChart>
       </ResponsiveContainer>
     </div>
