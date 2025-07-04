@@ -30,6 +30,8 @@ function LobbyPage({ user }) {
   const [kpiLoading, setKpiLoading] = useState({});
   const [nonKpiLoading, setNonKpiLoading] = useState({});
   const [fetchError, setFetchError] = useState(null);
+  const [filters, setFilters] = useState(null);
+
   const navigate = useNavigate();
 
   const accessToken = user?.access_token || initialToken;
@@ -154,8 +156,33 @@ function LobbyPage({ user }) {
     )}&token=${encodeURIComponent(accessToken)}`;
   };
 
+  const fetchFilters = async () => {
+    try {
+      const res = await fetch(
+        `/.netlify/functions/get-page-filters?pageId=${pageId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (res.ok) {
+        const { filters } = await res.json();
+        setFilters(filters);
+      } else {
+        console.warn("⚠️ Failed to fetch filters");
+      }
+    } catch (err) {
+      console.error("❌ Error fetching filters:", err);
+    }
+  };
+
   useEffect(() => {
-    fetchLobbyPage();
+    if (accessToken && pageId) {
+      fetchLobbyPage();
+      fetchFilters();
+    }
   }, [accessToken, pageId]);
 
   useEffect(() => {
@@ -345,7 +372,16 @@ function LobbyPage({ user }) {
           </h1>
         </div>
       </div>
-
+      {filters && (
+        <div className="text-gray-500 text-sm flex flex-wrap gap-3 p-2 items-center">
+          {Object.entries(filters).map(([key, value]) => (
+            <div key={key} className="bg-white/10">
+              <span className="font-medium">{key}:</span>
+              <span>{value}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="px-4 md:px-8 lg:px-12 py-6 w-full">
         {pageStructure.map((group, idx) => (
           <div key={idx} className="mb-8 w-full">

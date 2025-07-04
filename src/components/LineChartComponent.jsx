@@ -201,8 +201,36 @@ const LineChartComponent = ({ chart, pageParams }) => {
 
     const fetchGraphData = async () => {
       const url = `/.netlify/functions/get-chart-data/${elementId}`;
+
+      let updatedPageParams = pageParams;
+
+      try {
+        const filtersResponse = await fetch(
+          `/.netlify/functions/get-page-filters?pageId=${pageId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (filtersResponse.ok) {
+          const { filters } = await filtersResponse.json();
+          updatedPageParams = pageParams.map((param) => ({
+            ...param,
+            Value: filters[param.Name] ?? param.Value,
+          }));
+        } else {
+          console.warn(
+            "⚠️ Failed to fetch filters, proceeding without overrides"
+          );
+        }
+      } catch (err) {
+        console.error("❌ Error fetching filters:", err);
+      }
+
       const body = {
-        pageParams: { Parameter: pageParams || [] },
+        pageParams: { Parameter: updatedPageParams || [] },
         elemID: elementId,
         elemType: "LineChart",
         clientTimeMillis: Date.now(),
@@ -238,7 +266,7 @@ const LineChartComponent = ({ chart, pageParams }) => {
     };
 
     fetchGraphData();
-  }, [accessToken, elementId, pageParams]);
+  }, [accessToken, elementId, pageParams, pageId]);
 
   if (loading) return <div>Loading chart data...</div>;
   if (error) return <div>Error: {error}</div>;

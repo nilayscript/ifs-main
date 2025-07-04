@@ -47,7 +47,7 @@ const BarChartComponent = ({ chart, pageParams }) => {
   const [data, setData] = useState([]);
   const [xKey, setXKey] = useState(null);
   const [yKeys, setYKeys] = useState([]);
-  const { accessToken } = useParams();
+  const { accessToken, pageId } = useParams();
   const elementId = chart?.ID;
 
   const {
@@ -69,8 +69,35 @@ const BarChartComponent = ({ chart, pageParams }) => {
     const fetchGraphData = async () => {
       const url = `/.netlify/functions/get-chart-data/${elementId}`;
 
+      let updatedPageParams = pageParams;
+
+      try {
+        const filtersResponse = await fetch(
+          `/.netlify/functions/get-page-filters?pageId=${pageId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (filtersResponse.ok) {
+          const { filters } = await filtersResponse.json();
+          updatedPageParams = pageParams.map((param) => ({
+            ...param,
+            Value: filters[param.Name] ?? param.Value,
+          }));
+        } else {
+          console.warn(
+            "⚠️ Failed to fetch filters, proceeding without overrides"
+          );
+        }
+      } catch (err) {
+        console.error("❌ Error fetching filters:", err);
+      }
+
       const body = {
-        pageParams: { Parameter: pageParams || [] },
+        pageParams: { Parameter: updatedPageParams || [] },
         elemID: elementId,
         elemType: "BarChart",
         clientTimeMillis: Date.now(),
@@ -91,9 +118,6 @@ const BarChartComponent = ({ chart, pageParams }) => {
         const result = await response.json();
         const rows = result?.data?.rows || [];
 
-        console.log("RESULT", result, elementId);
-
-        // Transform rows to flat objects
         let transformedData = rows.map((row) => {
           const obj = {};
           row.columns.forEach((col) => {
@@ -104,12 +128,9 @@ const BarChartComponent = ({ chart, pageParams }) => {
           });
           return obj;
         });
-        console.log("TRANSFORMED", transformedData, elementId);
 
-        // Handle special case: single row with multiple metrics (non-series)
         if (transformedData.length === 1) {
           const row = transformedData[0];
-          console.log("ROW", row);
           const pivoted = Object.entries(row)
             .filter(([_, val]) => typeof val === "number")
             .map(([key, val]) => ({ Metric: key, Value: val }));
@@ -123,12 +144,12 @@ const BarChartComponent = ({ chart, pageParams }) => {
           setYKeys(initialYKeys);
         }
       } catch (error) {
-        console.error(`❌ Error fetching data:`, error.message);
+        console.error(`❌ Error fetching chart data:`, error.message);
       }
     };
 
     fetchGraphData();
-  }, [accessToken, elementId]);
+  }, [accessToken, elementId, pageParams, pageId]);
 
   const xLabel = chart?.XAxisTitle || xKey;
   const yLabel =

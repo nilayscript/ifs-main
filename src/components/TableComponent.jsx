@@ -26,23 +26,30 @@ const TableComponent = ({ list, pageParams }) => {
 
       let updatedPageParams = pageParams;
 
-      if (
-        pageId === "3556d3b6-b159-40f3-8c7d-41619a7204f7" ||
-        pageId === "c129b02c-9bb2-4801-9274-05424f3259d3"
-      ) {
-        updatedPageParams = pageParams.map((param) => {
-          let value = param.Value || "";
-          if (param.Name === "COMPANY")
-            value =
-              pageId === "3556d3b6-b159-40f3-8c7d-41619a7204f7" ? "11" : "11";
-          if (param.Name === "SITE")
-            value =
-              pageId === "3556d3b6-b159-40f3-8c7d-41619a7204f7" ? "103" : "101";
-          if (param.Name === "days")
-            value =
-              pageId === "3556d3b6-b159-40f3-8c7d-41619a7204f7" ? "365" : "100";
-          return { ...param, Value: value };
-        });
+      try {
+        const filtersResponse = await fetch(
+          `/.netlify/functions/get-page-filters?pageId=${pageId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (filtersResponse.ok) {
+          const { filters } = await filtersResponse.json();
+
+          updatedPageParams = pageParams.map((param) => ({
+            ...param,
+            Value: filters[param.Name] ?? param.Value,
+          }));
+        } else {
+          console.warn(
+            "⚠️ Failed to fetch filters, proceeding without overrides"
+          );
+        }
+      } catch (err) {
+        console.error("❌ Error fetching filters:", err);
       }
 
       const body = {

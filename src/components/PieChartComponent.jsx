@@ -14,7 +14,7 @@ const COLORS = [
 ];
 
 const PieChartComponent = ({ elementId, pageParams }) => {
-  const { accessToken } = useParams();
+  const { accessToken, pageId } = useParams();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,8 +26,36 @@ const PieChartComponent = ({ elementId, pageParams }) => {
 
     const fetchGraphData = async () => {
       const url = `/.netlify/functions/get-chart-data/${elementId}`;
+
+      let updatedPageParams = pageParams;
+
+      try {
+        const filtersResponse = await fetch(
+          `/.netlify/functions/get-page-filters?pageId=${pageId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (filtersResponse.ok) {
+          const { filters } = await filtersResponse.json();
+          updatedPageParams = pageParams.map((param) => ({
+            ...param,
+            Value: filters[param.Name] ?? param.Value,
+          }));
+        } else {
+          console.warn(
+            "⚠️ Failed to fetch filters, proceeding without overrides"
+          );
+        }
+      } catch (err) {
+        console.error("❌ Error fetching filters:", err);
+      }
+
       const body = {
-        pageParams: { Parameter: pageParams || [] },
+        pageParams: { Parameter: updatedPageParams || [] },
         elemID: elementId,
         elemType: "PieChart",
         clientTimeMillis: Date.now(),
@@ -46,7 +74,6 @@ const PieChartComponent = ({ elementId, pageParams }) => {
         const result = await response.json();
         const rows = result?.data?.rows || [];
 
-        // Transform data
         const chartData = rows.map((row) => {
           const nameColumn = row.columns.find(
             (col) => col.TypeName === "VARCHAR2"
@@ -70,7 +97,7 @@ const PieChartComponent = ({ elementId, pageParams }) => {
     };
 
     fetchGraphData();
-  }, [accessToken, elementId]);
+  }, [accessToken, elementId, pageParams, pageId]);
 
   if (loading) {
     return (
