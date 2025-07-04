@@ -91,39 +91,52 @@ function App() {
   const refreshTokens = async () => {
     setRefreshing(true);
     try {
+      const formData = new URLSearchParams();
+      formData.append("client_id", "IFS_digisigns");
+      formData.append("refresh_token", tokens.refresh_token);
+      formData.append("grant_type", "refresh_token");
+
       const res = await fetch(`/.netlify/functions/token-exchange`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client_id: "IFS_digisigns",
-          refresh_token: tokens.refresh_token,
-          grant_type: "refresh_token",
-        }),
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData.toString(),
       });
 
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
       const result = await res.json();
+
       if (result?.access_token) {
-        setTokens({
+        // Update both tokens and user state
+        const updatedTokens = {
           access_token: result.access_token,
-          refresh_token: result.refresh_token || tokens.refresh_token,
-        });
-        // Update the user object
+          refresh_token: result.refresh_token, // Always use the new refresh token
+        };
+        setTokens(updatedTokens);
+
         const updatedUser = {
           ...user,
-          access_token: result.access_token,
-          refresh_token: result.refresh_token || user.refresh_token,
+          ...updatedTokens,
           expires_at:
             Math.floor(Date.now() / 1000) + (result.expires_in || 3600),
         };
         setUser(updatedUser);
         await userManager.storeUser(updatedUser);
-        // message.success("Token refreshed!");
+
+        return result;
       } else {
-        // message.error(result.message || "Token refresh failed.");
+        throw new Error(result?.error_description || "Token refresh failed");
       }
     } catch (err) {
-      console.error("Token refresh error:", err);
-      // message.error("Error refreshing token.");
+      console.error("Refresh error:", err);
+      if (err.message.includes("invalid_grant")) {
+        await handleLogout();
+      }
+      throw err;
     } finally {
       setRefreshing(false);
     }
@@ -180,7 +193,6 @@ function App() {
     const timeUntilExpiry = user.expires_at - now;
 
     console.log("REFRESHING TOKEN BEFORE EXPIRY", timeUntilExpiry);
-
     const timer = setTimeout(() => {
       refreshTokens();
     }, Math.max(timeUntilExpiry - 60, 5) * 1000);
