@@ -4,7 +4,7 @@ import { Spin } from "antd";
 import dayjs from "dayjs";
 
 const TableComponent = ({ list, pageParams }) => {
-  const { accessToken } = useParams();
+  const { accessToken, pageId } = useParams();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const elementId = list.ID;
@@ -23,8 +23,30 @@ const TableComponent = ({ list, pageParams }) => {
 
     const fetchTableData = async () => {
       const url = `/.netlify/functions/get-chart-data/${elementId}`;
+
+      let updatedPageParams = pageParams;
+
+      if (
+        pageId === "3556d3b6-b159-40f3-8c7d-41619a7204f7" ||
+        pageId === "c129b02c-9bb2-4801-9274-05424f3259d3"
+      ) {
+        updatedPageParams = pageParams.map((param) => {
+          let value = param.Value || "";
+          if (param.Name === "COMPANY")
+            value =
+              pageId === "3556d3b6-b159-40f3-8c7d-41619a7204f7" ? "11" : "11";
+          if (param.Name === "SITE")
+            value =
+              pageId === "3556d3b6-b159-40f3-8c7d-41619a7204f7" ? "103" : "101";
+          if (param.Name === "days")
+            value =
+              pageId === "3556d3b6-b159-40f3-8c7d-41619a7204f7" ? "365" : "100";
+          return { ...param, Value: value };
+        });
+      }
+
       const body = {
-        pageParams: { Parameter: pageParams || [] },
+        pageParams: { Parameter: updatedPageParams || [] },
         elemID: elementId,
         elemType: "List",
         clientTimeMillis: Date.now(),
@@ -81,7 +103,10 @@ const TableComponent = ({ list, pageParams }) => {
       );
       const targetValue = targetValueObj ? Number(targetValueObj.Value) : 0;
 
-      const isRed = targetValue > 0;
+      const isRed =
+        pageId === "3556d3b6-b159-40f3-8c7d-41619a7204f7"
+          ? !(targetValue > 0)
+          : targetValue > 0;
       return (
         <span
           style={{

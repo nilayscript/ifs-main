@@ -126,7 +126,12 @@ function LobbyPage({ user }) {
     setNonKpiLoading((prev) => ({ ...prev, [elementId]: true }));
 
     try {
-      const result = await getNonKPIData(elementId, accessToken, pageParams);
+      const result = await getNonKPIData(
+        elementId,
+        accessToken,
+        pageParams,
+        pageId
+      );
       setNonKpiData((prev) => ({
         ...prev,
         [elementId]: result,
