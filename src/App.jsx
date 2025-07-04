@@ -192,7 +192,7 @@ function App() {
     const now = Math.floor(Date.now() / 1000);
     const timeUntilExpiry = user.expires_at - now;
     console.log("REFRESHING TOKEN BEFORE EXPIRY", timeUntilExpiry);
-    const minutesBeforeExpiry = 59;
+    const minutesBeforeExpiry = 5;
     const refreshTime = Math.max(timeUntilExpiry - minutesBeforeExpiry * 60, 5);
     console.log(
       `Scheduling token refresh in ${refreshTime} seconds (approximately ${Math.round(
