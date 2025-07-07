@@ -4,8 +4,12 @@ exports.handler = async (event, context) => {
   if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
-      headers,
-      body: JSON.stringify({ message: "CORS preflight success" }),
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      },
+      body: "Preflight OK",
     };
   }
 
@@ -17,9 +21,9 @@ exports.handler = async (event, context) => {
   }
 
   const headers = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": "*", // Allow all origins. For specific origin, use 'https://example.com'
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Content-Type": "application/json",
   };
 
   try {
