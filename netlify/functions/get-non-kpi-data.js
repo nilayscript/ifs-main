@@ -10,6 +10,14 @@ exports.handler = async (event) => {
     };
   }
 
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ message: "CORS preflight success" }),
+    };
+  }
+
   try {
     const res = await fetch(
       `https://ifsgcsc2-d02.demo.ifs.cloud/main/ifsapplications/web/server/lobby/page/element/${elementId}?useMaxTime=false`,

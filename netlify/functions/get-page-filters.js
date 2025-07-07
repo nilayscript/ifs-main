@@ -10,6 +10,14 @@ exports.handler = async (event) => {
     };
   }
 
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ message: "CORS preflight success" }),
+    };
+  }
+
   const url =
     "https://ifsgcsc2-d02.demo.ifs.cloud/main/ifsapplications/projection/v1/UserProfileService.svc/GetProfileSectionValues(ProfileSection='User%2Fifsweb%2FApplications%2FCompositePages%2FPageParameters')";
 

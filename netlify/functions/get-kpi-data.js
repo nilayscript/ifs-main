@@ -4,6 +4,14 @@ exports.handler = async (event, context) => {
     event.headers.authorization?.replace("Bearer ", "") ||
     event.queryStringParameters?.token;
 
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ message: "CORS preflight success" }),
+    };
+  }
+
   try {
     const response = await fetch(
       `https://ifsgcsc2-d02.demo.ifs.cloud/main/ifsapplications/projection/v1/KPIDetailsHandling.svc/CentralKpiSet?$filter=Id eq '${kpiId}'&$select=Measure`,
