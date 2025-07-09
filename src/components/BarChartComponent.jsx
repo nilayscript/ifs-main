@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import {
   BarChart,
   Bar,
@@ -43,11 +43,14 @@ const extractChartKeys = (chart) => {
   };
 };
 
-const BarChartComponent = ({ chart, pageParams }) => {
+const BarChartComponent = ({ chart, pageParams, theme }) => {
   const [data, setData] = useState([]);
   const [xKey, setXKey] = useState(null);
   const [yKeys, setYKeys] = useState([]);
-  const { accessToken, pageId } = useParams();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const accessToken = params.get("accessToken");
+  const pageId = params.get("pageId");
   const elementId = chart?.ID;
 
   const {
@@ -67,13 +70,13 @@ const BarChartComponent = ({ chart, pageParams }) => {
     }
 
     const fetchGraphData = async () => {
-      const url = `/.netlify/functions/get-chart-data/${elementId}`;
+      const url = `https://yzwf67apqf.execute-api.ap-south-1.amazonaws.com/prod/get-chart-data/${elementId}`;
 
       let updatedPageParams = pageParams;
 
       try {
         const filtersResponse = await fetch(
-          `/.netlify/functions/get-page-filters?pageId=${pageId}`,
+          `https://x027g5pm15.execute-api.ap-south-1.amazonaws.com/prod/get-page-filters?pageId=${pageId}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -155,16 +158,7 @@ const BarChartComponent = ({ chart, pageParams }) => {
   const yLabel =
     chart?.YAxisTitle || (yKeys.length === 1 ? yKeys[0] : "Values");
 
-  const colorPalette = [
-    "#b02753",
-    "#387908",
-    "#1864ab",
-    "#d97706",
-    "#059669",
-    "#6366f1",
-    "#f43f5e",
-    "#0ea5e9",
-  ];
+  const colorPalette = theme?.chartColors || [];
 
   console.log("yKeys", yKeys);
   console.log("First data row", data[0]);

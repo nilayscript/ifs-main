@@ -1,22 +1,17 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from "recharts";
 import { Spin } from "antd";
 
-const COLORS = [
-  "#0088FE",
-  "#00C49F",
-  "#FFBB28",
-  "#FF8042",
-  "#A28EFF",
-  "#F95C5C",
-  "#8884D8",
-];
-
-const PieChartComponent = ({ elementId, pageParams }) => {
-  const { accessToken, pageId } = useParams();
+const PieChartComponent = ({ elementId, pageParams, theme }) => {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const accessToken = params.get("accessToken");
+  const pageId = params.get("pageId");
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const COLORS = theme?.chartColors || [];
 
   useEffect(() => {
     if (!accessToken || !elementId) {
@@ -25,13 +20,13 @@ const PieChartComponent = ({ elementId, pageParams }) => {
     }
 
     const fetchGraphData = async () => {
-      const url = `/.netlify/functions/get-chart-data/${elementId}`;
+      const url = `https://yzwf67apqf.execute-api.ap-south-1.amazonaws.com/prod/get-chart-data/${elementId}`;
 
       let updatedPageParams = pageParams;
 
       try {
         const filtersResponse = await fetch(
-          `/.netlify/functions/get-page-filters?pageId=${pageId}`,
+          `https://x027g5pm15.execute-api.ap-south-1.amazonaws.com/prod/get-page-filters?pageId=${pageId}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,

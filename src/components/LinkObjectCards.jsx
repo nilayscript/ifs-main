@@ -1,8 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 
-const LinkObjectCards = ({ links = [], parentElementId, pageParams }) => {
-  const { accessToken, pageId } = useParams();
+const LinkObjectCards = ({
+  links = [],
+  parentElementId,
+  pageParams,
+  theme,
+}) => {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const accessToken = params.get("accessToken");
+  const pageId = params.get("pageId");
   const [linkData, setLinkData] = useState({});
 
   useEffect(() => {
@@ -18,7 +26,7 @@ const LinkObjectCards = ({ links = [], parentElementId, pageParams }) => {
 
       for (const link of links) {
         const elementId = `${parentElementId}_${link.ID}`;
-        const url = `/.netlify/functions/get-link-data/${elementId}`;
+        const url = `https://50sv0u37xc.execute-api.ap-south-1.amazonaws.com/prod/get-link-data/${elementId}`;
 
         const body = {
           pageParams: { Parameter: pageParams || [] },
@@ -44,9 +52,6 @@ const LinkObjectCards = ({ links = [], parentElementId, pageParams }) => {
           // Store the result with link ID as key
           results[link.ID] = {
             data: result.data,
-            // Get colors from the link object
-            background: link.Background || "#FFFFFF", // Default to white if not specified
-            foreground: link.Foreground || "#000000", // Default to black if not specified
             title: link.LinkTitle,
           };
         } catch (error) {
@@ -90,8 +95,8 @@ const LinkObjectCards = ({ links = [], parentElementId, pageParams }) => {
             key={link.ID}
             className="rounded-lg shadow-md p-4 transition-all hover:shadow-lg"
             style={{
-              backgroundColor: data?.background || link.Background || "#FFFFFF",
-              color: data?.foreground || link.Foreground || "#000000",
+              backgroundColor: theme.backgroundColor,
+              color: theme.textColor || "#000000",
             }}
           >
             <h3 className="text-lg font-semibold mb-2">{link.LinkTitle}</h3>

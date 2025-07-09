@@ -1,4 +1,4 @@
-// /.netlify/functions/get-page-filters.js
+// https://x027g5pm15.execute-api.ap-south-1.amazonaws.com/prod/get-page-filters.js
 exports.handler = async (event) => {
   const auth = event.headers.authorization;
   const pageId = event.queryStringParameters.pageId;

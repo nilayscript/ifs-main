@@ -4,13 +4,13 @@ export const getNonKPIData = async (
   pageParams,
   pageId
 ) => {
-  const url = `/.netlify/functions/get-non-kpi-data/${elementId}`;
+  const url = `https://vr8ickyvo2.execute-api.ap-south-1.amazonaws.com/prod/get-non-kpi-data/${elementId}`;
 
   let updatedPageParams = pageParams;
 
   try {
     const filtersResponse = await fetch(
-      `/.netlify/functions/get-page-filters?pageId=${pageId}`,
+      `https://x027g5pm15.execute-api.ap-south-1.amazonaws.com/prod/get-page-filters?pageId=${pageId}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,

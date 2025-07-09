@@ -43,7 +43,7 @@ const oidcConfig = {
     authorization_endpoint:
       "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/auth",
     token_endpoint:
-      "https://ifsmain.netlify.app/.netlify/functions/token-exchange",
+      "https://lt58e1yi9j.execute-api.ap-south-1.amazonaws.com/prod/token-exchange",
     userinfo_endpoint:
       "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/userinfo",
     end_session_endpoint:
@@ -96,13 +96,16 @@ function App() {
       formData.append("refresh_token", tokens.refresh_token);
       formData.append("grant_type", "refresh_token");
 
-      const res = await fetch(`/.netlify/functions/token-exchange`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: formData.toString(),
-      });
+      const res = await fetch(
+        `https://lt58e1yi9j.execute-api.ap-south-1.amazonaws.com/prod/token-exchange`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: formData.toString(),
+        }
+      );
 
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
@@ -147,12 +150,15 @@ function App() {
 
     setLoadingLobbies(true);
     try {
-      const res = await fetch(`/.netlify/functions/get-lobbies`, {
-        headers: {
-          Authorization: `Bearer ${tokens.access_token}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const res = await fetch(
+        `https://8hkhtukmb2.execute-api.ap-south-1.amazonaws.com/prod/get-lobbies`,
+        {
+          headers: {
+            Authorization: `Bearer ${tokens.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       const result = await res.json();
 
@@ -233,10 +239,7 @@ function App() {
           path="/callback"
           element={<Callback setUser={setUser} setTokens={setTokens} />}
         />
-        <Route
-          path={`/lobby/:accessToken/:pageId`}
-          element={<LobbyPage user={user} />}
-        />
+        <Route path={`/lobby`} element={<LobbyPage user={user} />} />
       </Routes>
     </Router>
   );
@@ -306,7 +309,7 @@ function Layout({
                       className="p-4 bg-white shadow rounded cursor-pointer"
                       onClick={() => {
                         navigate(
-                          `/lobby/${tokens?.access_token}/${lobby.pageId}`
+                          `/lobby?accessToken=${tokens?.access_token}&pageId=${lobby.pageId}`
                         );
                       }}
                     >
@@ -392,9 +395,8 @@ function Callback({ setUser, setTokens }) {
           );
         }
 
-        // Exchange code for tokens using Netlify function
         const tokenResponse = await fetch(
-          "/.netlify/functions/token-exchange",
+          "https://lt58e1yi9j.execute-api.ap-south-1.amazonaws.com/prod/token-exchange",
           {
             method: "POST",
             headers: {

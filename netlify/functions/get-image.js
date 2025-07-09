@@ -1,5 +1,3 @@
-// netlify/functions/get-image.js
-
 exports.handler = async (event, context) => {
   // Enable CORS
   const headers = {

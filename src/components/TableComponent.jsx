@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { Spin } from "antd";
 import dayjs from "dayjs";
 
-const TableComponent = ({ list, pageParams }) => {
-  const { accessToken, pageId } = useParams();
+const TableComponent = ({ list, pageParams, theme }) => {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const accessToken = params.get("accessToken");
+  const pageId = params.get("pageId");
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const elementId = list.ID;
@@ -22,13 +25,13 @@ const TableComponent = ({ list, pageParams }) => {
     }
 
     const fetchTableData = async () => {
-      const url = `/.netlify/functions/get-chart-data/${elementId}`;
+      const url = `https://yzwf67apqf.execute-api.ap-south-1.amazonaws.com/prod/get-chart-data/${elementId}`;
 
       let updatedPageParams = pageParams;
 
       try {
         const filtersResponse = await fetch(
-          `/.netlify/functions/get-page-filters?pageId=${pageId}`,
+          `https://x027g5pm15.execute-api.ap-south-1.amazonaws.com/prod/get-page-filters?pageId=${pageId}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -143,15 +146,25 @@ const TableComponent = ({ list, pageParams }) => {
 
   return (
     <div className="overflow-x-auto p-4 text-gray-800">
-      <h2 className="font-bold text-lg mb-4">{list.Title}</h2>
+      <h2
+        className="font-bold text-lg mb-4"
+        style={{ color: theme?.textColor }}
+      >
+        {list.Title}
+      </h2>
+
       <div className="rounded-lg shadow-md">
         <table className="w-full border-collapse rounded-lg overflow-hidden">
           <thead>
-            <tr className="bg-gray-100">
+            <tr>
               {columns.map((col) => (
                 <th
                   key={col.Name}
                   className="border border-gray-300 px-3 py-2 text-left"
+                  style={{
+                    backgroundColor: theme?.primaryColor || "#f3f4f6",
+                    color: "#ffffff",
+                  }}
                 >
                   {col.DisplayName}
                 </th>
@@ -160,7 +173,14 @@ const TableComponent = ({ list, pageParams }) => {
           </thead>
           <tbody>
             {data.map((row, idx) => (
-              <tr key={idx} className="hover:bg-gray-50 transition">
+              <tr
+                key={idx}
+                className="hover:bg-gray-50 transition"
+                style={{
+                  backgroundColor:
+                    idx % 2 === 0 ? "#fff" : theme?.backgroundColor,
+                }}
+              >
                 {columns.map((col) => (
                   <td
                     key={col.Name}

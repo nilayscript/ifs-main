@@ -1,22 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import GaugeChart from "react-gauge-chart";
 
-const GaugeComponent = ({ elementId, pageParams }) => {
-  const { accessToken, pageId } = useParams();
+const GaugeComponent = ({ elementId, pageParams, theme }) => {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const accessToken = params.get("accessToken");
+  const pageId = params.get("pageId");
   const [gaugeValue, setGaugeValue] = useState(null);
 
   useEffect(() => {
     if (!accessToken || !elementId) return;
 
     const fetchGaugeData = async () => {
-      const url = `/.netlify/functions/get-chart-data/${elementId}`;
+      const url = `https://yzwf67apqf.execute-api.ap-south-1.amazonaws.com/prod/get-chart-data/${elementId}`;
 
       let updatedPageParams = pageParams;
 
       try {
         const filtersResponse = await fetch(
-          `/.netlify/functions/get-page-filters?pageId=${pageId}`,
+          `https://x027g5pm15.execute-api.ap-south-1.amazonaws.com/prod/get-page-filters?pageId=${pageId}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,

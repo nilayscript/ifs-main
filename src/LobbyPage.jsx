@@ -1,17 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { message, Spin } from "antd";
 import {
   LoadingOutlined,
   HomeOutlined,
   LineChartOutlined,
-  BankOutlined,
   AppstoreOutlined,
   BarChartOutlined,
-  UnorderedListOutlined,
   LinkOutlined,
 } from "@ant-design/icons";
-import ObjectCards from "./components/LinkObjectCards";
 import LinkObjectCards from "./components/LinkObjectCards";
 import { getNonKPIData } from "./utils/getNonKPIData";
 import { CopyOutlined } from "@ant-design/icons";
@@ -20,9 +17,30 @@ import LineChartComponent from "./components/LineChartComponent";
 import PieChartComponent from "./components/PieChartComponent";
 import GaugeComponent from "./components/GaugeComponent";
 import TableComponent from "./components/TableComponent";
+import ImageComponent from "./components/ImageComponent";
+
+const defaultThemes = [
+  {
+    themeName: "Theme 0",
+    textColor: "#FFFFFF",
+    backgroundColor: "#7B27C2",
+    primaryColor: "#7B27C2",
+    secondaryColor: "#9F7AEA",
+    barChartColor: "#553C9A",
+    chartColors: ["#6B46C1", "#9F7AEA", "#D6BCFA", "#B794F4"],
+    statusColors: {
+      success: "#48BB78",
+      warning: "#ECC94B",
+      error: "#E53E3E",
+    },
+    iconColors: { active: "#48BB78", inactive: "#E53E3E" },
+  },
+];
 
 function LobbyPage({ user }) {
-  const { accessToken: initialToken, pageId } = useParams();
+  const params = new URLSearchParams(location.search);
+  const initialToken = params.get("accessToken");
+  const pageId = params.get("pageId");
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [kpiData, setKpiData] = useState({});
@@ -31,6 +49,28 @@ function LobbyPage({ user }) {
   const [nonKpiLoading, setNonKpiLoading] = useState({});
   const [fetchError, setFetchError] = useState(null);
   const [filters, setFilters] = useState(null);
+  const [lobbySettings, setLobbySettings] = useState(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+
+  const fetchLobbySettings = async () => {
+    setSettingsLoading(true);
+    try {
+      const res = await fetch(
+        `https://api.v2.digisigns.in/api/v1/ifs/get-lobby-settings/${pageId}`
+      );
+      const result = await res.json();
+      if (res.ok && result.data) {
+        setLobbySettings(result.data);
+      } else {
+        throw new Error(result.message || "Failed to fetch settings");
+      }
+    } catch (err) {
+      console.error("Failed to fetch lobby settings:", err);
+      setFetchError(err.message);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
 
   const navigate = useNavigate();
 
@@ -52,12 +92,15 @@ function LobbyPage({ user }) {
     setFetchError(null);
     try {
       // console.log("Fetching lobby page:", pageId);
-      const res = await fetch(`/.netlify/functions/get-lobby-page/${pageId}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const res = await fetch(
+        `https://kjuc8qy9qk.execute-api.ap-south-1.amazonaws.com/prod/get-lobby-page/${pageId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       // console.log("Response status:", res.status);
       const result = await res.json();
@@ -93,12 +136,15 @@ function LobbyPage({ user }) {
     setKpiLoading((prev) => ({ ...prev, [kpiId]: true }));
 
     try {
-      const res = await fetch(`/.netlify/functions/get-kpi-data/${kpiId}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const res = await fetch(
+        `https://1td8zqu882.execute-api.ap-south-1.amazonaws.com/prod/get-kpi-data/${kpiId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (res.ok) {
         const result = await res.json();
@@ -149,17 +195,10 @@ function LobbyPage({ user }) {
     }
   };
 
-  const getAuthenticatedImageUrl = (imgPath) => {
-    if (!imgPath) return "/placeholder-image.png";
-    return `/.netlify/functions/get-image?path=${encodeURIComponent(
-      imgPath
-    )}&token=${encodeURIComponent(accessToken)}`;
-  };
-
   const fetchFilters = async () => {
     try {
       const res = await fetch(
-        `/.netlify/functions/get-page-filters?pageId=${pageId}`,
+        `https://x027g5pm15.execute-api.ap-south-1.amazonaws.com/prod/get-page-filters?pageId=${pageId}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -182,12 +221,15 @@ function LobbyPage({ user }) {
     if (accessToken && pageId) {
       fetchLobbyPage();
       fetchFilters();
+      fetchLobbySettings();
     }
   }, [accessToken, pageId]);
 
   useEffect(() => {
     if (user?.access_token && user.access_token !== initialToken) {
-      navigate(`/lobby/${user.access_token}/${pageId}`, { replace: true });
+      navigate(`/lobby?accessToken=${user.access_token}&pageId=${pageId}`, {
+        replace: true,
+      });
     }
   }, [user?.access_token, initialToken, pageId, navigate]);
 
@@ -205,7 +247,7 @@ function LobbyPage({ user }) {
 
             if (match && match[1]) {
               const kpiId = match[1];
-              // console.log(`Fetching KPI data for ID: ${kpiId}`);
+              console.log(`Fetching KPI data for ID: ${kpiId}`);
               fetchKpiData(kpiId);
             }
           } else if (counter.ID) {
@@ -299,22 +341,22 @@ function LobbyPage({ user }) {
 
   const antIcon = <LoadingOutlined style={{ fontSize: 36 }} spin />;
 
-  if (loading) {
+  const theme = lobbySettings?.theme || defaultThemes[0];
+
+  if (loading || settingsLoading) {
     return (
       <div className="min-h-screen flex flex-col gap-2 justify-center items-center bg-white w-[100vw]">
         <Spin indicator={antIcon} size="large" />
-        <p className="text-[18px] font-[500] text-black">
-          Loading lobby page data...
-        </p>
+        <p className="text-[18px] font-[500] text-black">Loading ....</p>
       </div>
     );
   }
 
   if (!pageData) {
     return (
-      <div className="min-h-screen bg-white w-[100vw]">
-        <div className="p-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-red-700 w-full mx-auto">
+      <div className="min-h-screen w-[100vw]">
+        <div>
+          <div className="bg-red-500 border border-red-200 rounded-lg p-6 text-red-700 w-full mx-auto">
             <p className="text-lg mb-3">No data available</p>
             {fetchError && (
               <p className="text-sm mb-3 font-semibold">Error: {fetchError}</p>
@@ -353,20 +395,14 @@ function LobbyPage({ user }) {
 
   return (
     <div className="min-h-screen bg-gray-50 w-[100vw]">
-      <ObjectCards />
-      <div className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-6 shadow-lg w-full">
+      <div
+        className="py-8 shadow-lg w-full"
+        style={{
+          background: `linear-gradient(to bottom right, ${theme.backgroundColor}, ${theme.textColor})`,
+          color: theme.textColor,
+        }}
+      >
         <div className="px-4 md:px-8 lg:px-12 w-full">
-          <div className="flex items-center text-sm mb-3 opacity-90 w-full">
-            <Link
-              to="/"
-              className="text-white hover:text-gray-200 flex items-center"
-            >
-              <HomeOutlined className="mr-1" />
-              Dashboard
-            </Link>
-            <span className="mx-2">/</span>
-            <span>{pageTitle}</span>
-          </div>
           <h1 className="text-4xl font-bold uppercase tracking-wide">
             {pageTitle}
           </h1>
@@ -386,7 +422,10 @@ function LobbyPage({ user }) {
         {pageStructure.map((group, idx) => (
           <div key={idx} className="mb-8 w-full">
             {group.isSeparator && group.separatorTitle && (
-              <div className="bg-gray-100 border-l-4 border-purple-600 px-6 py-4 mb-6 font-semibold text-gray-800 flex items-center text-lg">
+              <div
+                className="bg-gray-100 border-l-4 px-6 py-4 mb-6 font-semibold text-gray-800 flex items-center text-lg"
+                style={{ borderLeftColor: theme.textColor }}
+              >
                 <AppstoreOutlined className="mr-3 text-xl" />
                 {group.separatorTitle}
               </div>
@@ -400,42 +439,14 @@ function LobbyPage({ user }) {
                 } gap-6 mb-6 w-full`}
               >
                 {group.images.map((img, imgIdx) => (
-                  <div key={imgIdx} className="relative group w-full">
-                    {img.WebUrl ? (
-                      <Link
-                        to={`/lobby/${accessToken}/${img.WebUrl.replace(
-                          /^\/+/,
-                          ""
-                        ).replace(/^lobby\//, "")}`}
-                        className="block"
-                      >
-                        <img
-                          className="w-full h-[25rem] rounded-lg shadow-lg object-cover group-hover:shadow-xl transition-shadow"
-                          src={getAuthenticatedImageUrl(img.Image)}
-                          alt={img.Name || `Image ${imgIdx + 1}`}
-                          onError={(e) => {
-                            e.target.src = "/placeholder-image.png";
-                          }}
-                        />
-                        {img.Title && (
-                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6 rounded-b-lg">
-                            <h3 className="text-white text-xl font-semibold">
-                              {img.Title}
-                            </h3>
-                          </div>
-                        )}
-                      </Link>
-                    ) : (
-                      <img
-                        className="w-full h-[25rem] rounded-lg shadow-lg object-cover"
-                        src={getAuthenticatedImageUrl(img.Image)}
-                        alt={img.Name || `Image ${imgIdx + 1}`}
-                        onError={(e) => {
-                          e.target.src = "/placeholder-image.png";
-                        }}
-                      />
-                    )}
-                  </div>
+                  <ImageComponent
+                    key={imgIdx}
+                    imagePath={img.Image}
+                    accessToken={accessToken}
+                    title={img.Title}
+                    webUrl={img.WebUrl}
+                    altText={img.Name || `Image ${imgIdx + 1}`}
+                  />
                 ))}
               </div>
             )}
@@ -471,12 +482,18 @@ function LobbyPage({ user }) {
                             key={kpi.ID || kpiIdx}
                             className="bg-white rounded-lg p-5 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
                           >
-                            <div className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                            <div
+                              className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide"
+                              style={{ color: theme.secondaryColor }}
+                            >
                               {title}
                             </div>
                             {isLoadingKpi ? (
                               <div className="flex items-center justify-center h-12">
-                                <LoadingOutlined className="text-2xl text-purple-600" />
+                                <LoadingOutlined
+                                  className="text-2xl"
+                                  style={{ color: theme.textColor }}
+                                />
                               </div>
                             ) : (
                               <>
@@ -520,9 +537,10 @@ function LobbyPage({ user }) {
                               {kpi.Title}
                             </div>
                             {isLoading ? (
-                              <div className="flex items-center justify-center h-12">
-                                <LoadingOutlined className="text-2xl text-purple-600" />
-                              </div>
+                              <LoadingOutlined
+                                className="text-2xl"
+                                style={{ color: theme.textColor }}
+                              />
                             ) : (
                               <>
                                 <div className="text-3xl font-bold mb-1 text-gray-900">
@@ -577,6 +595,7 @@ function LobbyPage({ user }) {
                             }
                             parentElementId={parentElementId}
                             pageParams={pageData.pageParams}
+                            theme={theme}
                           />
                         </div>
                       )}
@@ -604,6 +623,7 @@ function LobbyPage({ user }) {
                         <BarChartComponent
                           chart={chart}
                           pageParams={pageData.pageParams}
+                          theme={theme}
                         />
                       </div>
                     </div>
@@ -631,6 +651,7 @@ function LobbyPage({ user }) {
                         <LineChartComponent
                           chart={chart}
                           pageParams={pageData.pageParams}
+                          theme={theme}
                         />
                       </div>
                     </div>
@@ -659,6 +680,7 @@ function LobbyPage({ user }) {
                         <PieChartComponent
                           elementId={elementId}
                           pageParams={pageData.pageParams}
+                          theme={theme}
                         />
                       </div>
                     </div>
@@ -686,6 +708,7 @@ function LobbyPage({ user }) {
                         <GaugeComponent
                           elementId={elementId}
                           pageParams={pageData.pageParams}
+                          theme={theme}
                         />
                       </div>
                     </div>
@@ -706,6 +729,7 @@ function LobbyPage({ user }) {
                       <TableComponent
                         list={list}
                         pageParams={pageData.pageParams}
+                        theme={theme}
                       />
                     </div>
                   </div>
@@ -738,7 +762,11 @@ function LobbyPage({ user }) {
                         href={targetPageId}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white p-8 rounded-lg text-center transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
+                        className="block text-white p-8 rounded-lg text-center transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
+                        style={{
+                          background: `linear-gradient(to bottom right, ${theme.textColor}, ${theme.backgroundColor})`,
+                          color: theme.textColor,
+                        }}
                       >
                         <h5 className="text-xl font-semibold uppercase tracking-wide">
                           {text.BodyText}
@@ -750,8 +778,12 @@ function LobbyPage({ user }) {
                   return (
                     <Link
                       key={textIdx}
-                      to={`/lobby/${accessToken}/${targetPageId}`}
-                      className="block bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white p-8 rounded-lg text-center transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
+                      to={`/lobby?accessToken=${accessToken}&pageId=${targetPageId}`}
+                      className="block text-white p-8 rounded-lg text-center transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
+                      style={{
+                        background: `linear-gradient(to bottom right, ${theme.textColor}, ${theme.backgroundColor})`,
+                        color: theme.textColor,
+                      }}
                     >
                       <h5 className="text-xl font-semibold uppercase tracking-wide">
                         {text.BodyText}

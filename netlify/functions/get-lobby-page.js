@@ -1,5 +1,3 @@
-// netlify/functions/lobby-page.js
-
 exports.handler = async (event, context) => {
   if (event.httpMethod === "OPTIONS") {
     return {

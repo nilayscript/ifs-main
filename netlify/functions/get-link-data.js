@@ -1,5 +1,5 @@
 exports.handler = async (event) => {
-  const auth = event.headers.authorization;
+  const auth = event.headers.authorization || event.headers.Authorization;
   const elementId = event.path.split("/").pop();
   const body = JSON.parse(event.body);
 

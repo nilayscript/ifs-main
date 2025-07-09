@@ -1,7 +1,6 @@
-// netlify/functions/get-kpi-measure.js
 exports.handler = async (event, context) => {
   const kpiId = event.path.split("/").pop();
-  const token = event.headers.authorization;
+  const token = event.headers.authorization || event.headers.Authorization;
 
   if (!kpiId || !token) {
     return {

@@ -2,7 +2,7 @@ exports.handler = async (event, context) => {
   const kpiId = event.path.split("/").pop();
   const token =
     event.headers.authorization?.replace("Bearer ", "") ||
-    event.queryStringParameters?.token;
+    event.headers.Authorization?.replace("Bearer ", "");
 
   if (event.httpMethod === "OPTIONS") {
     return {

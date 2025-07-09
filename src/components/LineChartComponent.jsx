@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import {
   LineChart,
   Line,
@@ -184,8 +184,11 @@ const transformDataForChart = (apiData, chartConfig) => {
     },
   };
 };
-const LineChartComponent = ({ chart, pageParams }) => {
-  const { accessToken, pageId } = useParams();
+const LineChartComponent = ({ chart, pageParams, theme }) => {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const accessToken = params.get("accessToken");
+  const pageId = params.get("pageId");
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -200,13 +203,13 @@ const LineChartComponent = ({ chart, pageParams }) => {
     }
 
     const fetchGraphData = async () => {
-      const url = `/.netlify/functions/get-chart-data/${elementId}`;
+      const url = `https://yzwf67apqf.execute-api.ap-south-1.amazonaws.com/prod/get-chart-data/${elementId}`;
 
       let updatedPageParams = pageParams;
 
       try {
         const filtersResponse = await fetch(
-          `/.netlify/functions/get-page-filters?pageId=${pageId}`,
+          `https://x027g5pm15.execute-api.ap-south-1.amazonaws.com/prod/get-page-filters?pageId=${pageId}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -273,14 +276,7 @@ const LineChartComponent = ({ chart, pageParams }) => {
   if (!chartData || !chartData.series.length)
     return <div>No data available for chart</div>;
 
-  const colors = [
-    "#8884d8",
-    "#82ca9d",
-    "#ffc658",
-    "#ff8042",
-    "#0088FE",
-    "#00C49F",
-  ];
+  const colors = theme?.chartColors || [];
 
   // Calculate max Y value for domain with null checks
   const maxValue = Math.max(

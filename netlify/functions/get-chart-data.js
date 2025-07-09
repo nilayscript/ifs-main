@@ -1,4 +1,3 @@
-// Netlify function to fetch chart data from IFS
 exports.handler = async (event) => {
   const auth = event.headers.authorization;
   const elementId = event.path.split("/").pop();
