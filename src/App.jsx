@@ -42,7 +42,8 @@ const oidcConfig = {
     issuer: "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021",
     authorization_endpoint:
       "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/auth",
-    token_endpoint: "/.netlify/functions/token-exchange",
+    token_endpoint:
+      "https://lt58e1yi9j.execute-api.ap-south-1.amazonaws.com/prod/token-exchange",
     userinfo_endpoint:
       "https://ifsgcsc2-d02.demo.ifs.cloud/auth/realms/gcc2d021/protocol/openid-connect/userinfo",
     end_session_endpoint:
@@ -95,13 +96,16 @@ function App() {
       formData.append("refresh_token", tokens.refresh_token);
       formData.append("grant_type", "refresh_token");
 
-      const res = await fetch(`/.netlify/functions/token-exchange`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: formData.toString(),
-      });
+      const res = await fetch(
+        `https://lt58e1yi9j.execute-api.ap-south-1.amazonaws.com/prod/token-exchange`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: formData.toString(),
+        }
+      );
 
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
@@ -146,12 +150,15 @@ function App() {
 
     setLoadingLobbies(true);
     try {
-      const res = await fetch(`/.netlify/functions/get-lobbies`, {
-        headers: {
-          Authorization: `Bearer ${tokens.access_token}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const res = await fetch(
+        `https://8hkhtukmb2.execute-api.ap-south-1.amazonaws.com/prod/get-lobbies`,
+        {
+          headers: {
+            Authorization: `Bearer ${tokens.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       const result = await res.json();
 
@@ -389,7 +396,7 @@ function Callback({ setUser, setTokens }) {
         }
 
         const tokenResponse = await fetch(
-          "/.netlify/functions/token-exchange",
+          "https://lt58e1yi9j.execute-api.ap-south-1.amazonaws.com/prod/token-exchange",
           {
             method: "POST",
             headers: {
