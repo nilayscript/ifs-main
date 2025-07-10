@@ -398,8 +398,8 @@ function LobbyPage({ user }) {
       <div
         className="py-8 shadow-lg w-full"
         style={{
-          background: `linear-gradient(to bottom right, ${theme.backgroundColor}, ${theme.textColor})`,
-          color: theme.textColor,
+          background: theme.textColor,
+          color: theme.backgroundColor,
         }}
       >
         <div className="px-4 md:px-8 lg:px-12 w-full">
@@ -531,9 +531,9 @@ function LobbyPage({ user }) {
                         return (
                           <div
                             key={kpi.ID || kpiIdx}
-                            className="bg-white rounded-lg p-5 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+                            className="rounded-[12px] p-5 shadow-xl transition-shadow cursor-pointer w-full"
                           >
-                            <div className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                            <div className="text-xs font-bold text-[#3A3A3A] mb-2 uppercase tracking-wide">
                               {kpi.Title}
                             </div>
                             {isLoading ? (
@@ -543,7 +543,10 @@ function LobbyPage({ user }) {
                               />
                             ) : (
                               <>
-                                <div className="text-3xl font-bold mb-1 text-gray-900">
+                                <div
+                                  className="text-4xl font-[700] mb-1 w-full p-2"
+                                  style={{ color: theme.textColor }}
+                                >
                                   {value !== null
                                     ? `${
                                         kpi.RoundValue
@@ -558,7 +561,7 @@ function LobbyPage({ user }) {
                                       }`
                                     : "-"}
                                 </div>
-                                <div className="text-xs text-gray-500 uppercase">
+                                <div className="text-[9px] font-[600] text-wrap text-[#3A3A3A] uppercase p-2">
                                   {kpi.Footer || ""}
                                 </div>
                               </>
@@ -764,8 +767,8 @@ function LobbyPage({ user }) {
                         rel="noopener noreferrer"
                         className="block text-white p-8 rounded-lg text-center transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
                         style={{
-                          background: `linear-gradient(to bottom right, ${theme.textColor}, ${theme.backgroundColor})`,
-                          color: theme.textColor,
+                          background: theme.textColor,
+                          color: theme.backgroundColor,
                         }}
                       >
                         <h5 className="text-xl font-semibold uppercase tracking-wide">
@@ -781,8 +784,8 @@ function LobbyPage({ user }) {
                       to={`/lobby?accessToken=${accessToken}&pageId=${targetPageId}`}
                       className="block text-white p-8 rounded-lg text-center transition-all duration-200 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
                       style={{
-                        background: `linear-gradient(to bottom right, ${theme.textColor}, ${theme.backgroundColor})`,
-                        color: theme.textColor,
+                        background: theme.textColor,
+                        color: theme.backgroundColor,
                       }}
                     >
                       <h5 className="text-xl font-semibold uppercase tracking-wide">
@@ -795,9 +798,8 @@ function LobbyPage({ user }) {
             )}
           </div>
         ))}
-
         {/* Show raw data toggle (optional) */}
-        <details className="mt-12 mb-6">
+        {/* <details className="mt-12 mb-6">
           <summary className="cursor-pointer text-gray-600 hover:text-gray-800 font-medium flex items-center justify-between">
             <span>View Raw JSON Data</span>
             <CopyOutlined
@@ -816,7 +818,7 @@ function LobbyPage({ user }) {
               {JSON.stringify(pageData, null, 2)}
             </pre>
           </div>
-        </details>
+        </details> */}
       </div>
     </div>
   );

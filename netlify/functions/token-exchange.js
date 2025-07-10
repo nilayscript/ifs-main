@@ -1,4 +1,8 @@
 exports.handler = async (event) => {
+  // const body = event.isBase64Encoded
+  // ? Buffer.from(event.body, 'base64').toString('utf-8')
+  // : event.body;
+
   // Only allow POST
   if (event.httpMethod !== "POST") {
     return {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 const LinkObjectCards = ({
   links = [],
@@ -44,12 +44,7 @@ const LinkObjectCards = ({
           });
 
           const result = await response.json();
-          // console.log(
-          //   `✅ Response for ${link.LinkTitle} (${link.ID}):`,
-          //   result
-          // );
 
-          // Store the result with link ID as key
           results[link.ID] = {
             data: result.data,
             title: link.LinkTitle,
@@ -70,17 +65,8 @@ const LinkObjectCards = ({
   }, [accessToken, parentElementId, links]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {links.map((link) => {
-        // Skip rendering if MappedColumns is empty
-        // if (
-        //   !link.ColumnMapping ||
-        //   !link.ColumnMapping.MappedColumns ||
-        //   Object.keys(link.ColumnMapping.MappedColumns).length === 0
-        // ) {
-        //   return null;
-        // }
-
         const data = linkData[link.ID];
         const hasMappedColumns =
           link.ColumnMapping &&
@@ -90,24 +76,59 @@ const LinkObjectCards = ({
         const count =
           hasMappedColumns && data?.data?.rows?.[0]?.columns?.[0]?.Value;
 
+        if (!data) {
+          // Loading state (skeleton loader)
+          return (
+            <div
+              key={link.ID}
+              className="flex flex-col items-start justify-start rounded-lg shadow-md p-4 transition-all text-[14px] animate-pulse"
+              style={{
+                border: `1px solid ${theme.secondaryColor}`,
+                background: theme.cardColor,
+              }}
+            >
+              <div className="w-full h-4 bg-gray-300 rounded mb-2"></div>
+              <div className="w-1/2 h-8 bg-gray-300 rounded"></div>
+            </div>
+          );
+        }
+
         return (
-          <div
-            key={link.ID}
-            className="rounded-lg shadow-md p-4 transition-all hover:shadow-lg"
-            style={{
-              backgroundColor: theme.backgroundColor,
-              color: theme.textColor || "#000000",
-            }}
-          >
-            <h3 className="text-lg font-semibold mb-2">{link.LinkTitle}</h3>
-            {data?.error ? (
+          <div key={link.ID}>
+            {data.error ? (
               <p className="text-red-500">Error loading data</p>
             ) : hasMappedColumns && count !== undefined ? (
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold">{count}</span>
-                <span className="text-sm opacity-75">Count</span>
+              <div className="flex flex-col items-start justify-start rounded-lg shadow-md p-4 transition-all text-[14px]">
+                <h1 className="text-lg font-semibold mb-2 !text-[12px] !w-full uppercase">
+                  {link.LinkTitle}
+                </h1>
+                <div className="flex flex-col items-center justify-between">
+                  <span className="text-4xl text-[#444444] font-bold">
+                    {count}
+                  </span>
+                  <span className="text-[12px] opacity-75 font-[600]">
+                    Count
+                  </span>
+                </div>
               </div>
-            ) : null}
+            ) : (
+              <div
+                className="flex flex-col items-start justify-start rounded-lg shadow-md p-4 transition-all text-[14px]"
+                style={{
+                  border: `1px solid ${theme.secondaryColor}`,
+                  background: theme.cardColor,
+                }}
+              >
+                <h1
+                  className="text-lg mb-2 !text-[12px] font-[700] !w-full uppercase"
+                  style={{
+                    color: theme.textColor,
+                  }}
+                >
+                  {link.LinkTitle}
+                </h1>
+              </div>
+            )}
           </div>
         );
       })}
