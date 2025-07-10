@@ -99,14 +99,14 @@ const LinkObjectCards = ({
               <p className="text-red-500">Error loading data</p>
             ) : hasMappedColumns && count !== undefined ? (
               <div className="flex flex-col items-start justify-start rounded-lg shadow-md p-4 transition-all text-[14px]">
-                <h1 className="text-lg font-semibold mb-2 !text-[12px] !w-full uppercase">
+                <h1 className="text-lg !text-[#3A3A3A] font-semibold mb-2 !text-[12px] !w-full uppercase">
                   {link.LinkTitle}
                 </h1>
                 <div className="flex flex-col items-center justify-between">
                   <span className="text-4xl text-[#444444] font-bold">
                     {count}
                   </span>
-                  <span className="text-[12px] opacity-75 font-[600]">
+                  <span className="text-[12px] !text-[#3A3A3A] opacity-75 font-[600]">
                     Count
                   </span>
                 </div>
