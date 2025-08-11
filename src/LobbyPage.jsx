@@ -399,7 +399,7 @@ function LobbyPage({ user }) {
   return (
     <div className="min-h-screen bg-gray-50 w-[100vw]">
       <div
-        className="py-8 shadow-lg w-full"
+        className="py-8 shadow-lg w-full flex items-center justify-between px-2"
         style={{
           background: theme.textColor,
           color: theme.backgroundColor,
