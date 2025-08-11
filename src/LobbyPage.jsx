@@ -342,6 +342,9 @@ function LobbyPage({ user }) {
   const antIcon = <LoadingOutlined style={{ fontSize: 36 }} spin />;
 
   const theme = lobbySettings?.theme || defaultThemes[0];
+  const logo =
+    lobbySettings?.logoLink ||
+    "https://digiboardimages.s3.ap-south-1.amazonaws.com/ngagegrid.svg";
 
   if (loading || settingsLoading) {
     return (
@@ -406,6 +409,9 @@ function LobbyPage({ user }) {
           <h1 className="text-4xl font-bold uppercase tracking-wide">
             {pageTitle}
           </h1>
+        </div>
+        <div className="bg-white h-[4rem] w-[11rem] rounded-md flex items-center justify-center p-4 mr-4">
+          <img src={logo} className="w-full h-full object-contain" />
         </div>
       </div>
       {filters && (
